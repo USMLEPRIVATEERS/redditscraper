@@ -1,0 +1,3385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reddit Scraper Ultra Pro - Massive Posts & Comments Extractor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #16213e 100%);
+      min-height: 100vh;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #ffffff;
+    }
+
+    .dark-glass {
+      background: rgba(20, 20, 40, 0.7);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .neon-gradient {
+      background: linear-gradient(135deg, #ff006e, #8338ec, #3a86ff);
+      background-size: 200% 200%;
+      animation: gradientShift 3s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .neon-button {
+      background: linear-gradient(135deg, #ff006e 0%, #8338ec 100%);
+      box-shadow: 0 4px 15px rgba(255, 0, 110, 0.4);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .neon-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(255, 0, 110, 0.6);
+    }
+
+    .neon-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .neon-button:hover::before {
+      left: 100%;
+    }
+
+    .success-button {
+      background: linear-gradient(135deg, #00f593 0%, #00d9ff 100%);
+      box-shadow: 0 4px 15px rgba(0, 245, 147, 0.4);
+    }
+
+    .success-button:hover {
+      box-shadow: 0 6px 25px rgba(0, 245, 147, 0.6);
+    }
+
+    .danger-button {
+      background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
+      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+    }
+
+    .danger-button:hover {
+      box-shadow: 0 6px 25px rgba(255, 71, 87, 0.6);
+    }
+
+    .info-button {
+      background: linear-gradient(135deg, #3a86ff 0%, #8338ec 100%);
+      box-shadow: 0 4px 15px rgba(58, 134, 255, 0.4);
+    }
+
+    .warning-button {
+      background: linear-gradient(135deg, #ffd60a 0%, #ffb700 100%);
+      box-shadow: 0 4px 15px rgba(255, 214, 10, 0.4);
+    }
+
+    .pause-button {
+      background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
+      box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+    }
+
+    .loading-spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top: 3px solid #ff006e;
+      border-right: 3px solid #8338ec;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, rgba(255, 0, 110, 0.1) 0%, rgba(131, 56, 236, 0.1) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(255, 0, 110, 0.3);
+      border-color: rgba(255, 0, 110, 0.5);
+    }
+
+    .tab-button {
+      position: relative;
+      transition: all 0.3s ease;
+      color: #94a3b8;
+      background: transparent;
+    }
+
+    .tab-button:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-active {
+      color: #ffffff !important;
+      background: linear-gradient(135deg, rgba(255, 0, 110, 0.2) 0%, rgba(131, 56, 236, 0.2) 100%) !important;
+      border-bottom: 3px solid #ff006e;
+    }
+
+    .tab-active::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #ff006e, #8338ec);
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { width: 0; left: 50%; }
+      to { width: 100%; left: 0; }
+    }
+
+    .post-card {
+      background: rgba(30, 30, 50, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .post-card:hover {
+      background: rgba(40, 40, 60, 0.8);
+      border-color: rgba(255, 0, 110, 0.3);
+      transform: translateX(5px);
+      box-shadow: 0 5px 20px rgba(255, 0, 110, 0.2);
+    }
+
+    .comment-thread {
+      border-left: 2px solid;
+      border-image: linear-gradient(180deg, #ff006e, #8338ec) 1;
+      padding-left: 1rem;
+      margin-left: 0.5rem;
+    }
+
+    .link-card {
+      background: rgba(30, 30, 50, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .link-card:hover {
+      background: rgba(40, 40, 60, 0.8);
+      border-color: rgba(0, 245, 147, 0.3);
+      transform: scale(1.02);
+      box-shadow: 0 5px 20px rgba(0, 245, 147, 0.2);
+    }
+
+    .image-card {
+      background: rgba(30, 30, 50, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+      overflow: hidden;
+      aspect-ratio: 1;
+      position: relative;
+    }
+
+    .image-card:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(131, 56, 236, 0.4);
+      border-color: rgba(131, 56, 236, 0.5);
+    }
+
+    .image-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .image-card:hover img {
+      transform: scale(1.1);
+    }
+
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      background: #00f593;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      display: inline-block;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(0, 245, 147, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(0, 245, 147, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 245, 147, 0); }
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      animation: slideInRight 0.3s ease-out;
+      backdrop-filter: blur(10px);
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    input[type="checkbox"] {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    input[type="checkbox"]:checked {
+      background: linear-gradient(135deg, #ff006e, #8338ec);
+      border-color: #ff006e;
+    }
+
+    input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      color: white;
+      font-size: 14px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
+      background: rgba(20, 20, 40, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      transition: all 0.3s ease;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus, select:focus, textarea:focus {
+      border-color: #ff006e;
+      background: rgba(30, 30, 50, 0.7);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(255, 0, 110, 0.1);
+    }
+
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(20, 20, 40, 0.5);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #ff006e, #8338ec);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #ff006e, #3a86ff);
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .glow-text {
+      text-shadow: 0 0 10px rgba(255, 0, 110, 0.5),
+                   0 0 20px rgba(131, 56, 236, 0.3),
+                   0 0 30px rgba(58, 134, 255, 0.2);
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .chart-bar {
+      background: linear-gradient(90deg, #ff006e, #8338ec, #3a86ff);
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+
+    .chart-bar:hover {
+      transform: scaleY(1.1);
+      box-shadow: 0 5px 15px rgba(255, 0, 110, 0.3);
+    }
+
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      background: rgba(0, 245, 147, 0.1);
+      border: 1px solid rgba(0, 245, 147, 0.3);
+      border-radius: 20px;
+    }
+
+    .proxy-selector {
+      background: rgba(255, 165, 0, 0.1);
+      border: 1px solid rgba(255, 165, 0, 0.3);
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .proxy-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.875rem;
+    }
+
+    .proxy-working {
+      background: rgba(0, 245, 147, 0.1);
+      border: 1px solid rgba(0, 245, 147, 0.3);
+      color: #00f593;
+    }
+
+    .proxy-failed {
+      background: rgba(255, 71, 87, 0.1);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+      color: #ff4757;
+    }
+
+    .batch-progress {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+
+    .batch-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem;
+      border-radius: 5px;
+      margin-bottom: 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .batch-complete {
+      background: rgba(0, 245, 147, 0.1);
+      border: 1px solid rgba(0, 245, 147, 0.2);
+    }
+
+    .batch-loading {
+      background: rgba(255, 214, 10, 0.1);
+      border: 1px solid rgba(255, 214, 10, 0.2);
+    }
+
+    .batch-error {
+      background: rgba(255, 71, 87, 0.1);
+      border: 1px solid rgba(255, 71, 87, 0.2);
+    }
+
+    .search-highlight {
+      background: linear-gradient(135deg, #ffd60a 0%, #ffb700 100%);
+      color: #000;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+
+    .search-result-card {
+      background: rgba(30, 30, 50, 0.6);
+      border: 2px solid;
+      border-image: linear-gradient(135deg, #ff006e, #8338ec) 1;
+      transition: all 0.3s ease;
+    }
+
+    .search-result-card:hover {
+      background: rgba(40, 40, 60, 0.8);
+      transform: translateX(5px);
+      box-shadow: 0 5px 20px rgba(255, 0, 110, 0.3);
+    }
+
+    .query-tag {
+      display: inline-block;
+      padding: 4px 8px;
+      margin: 2px;
+      background: rgba(131, 56, 236, 0.2);
+      border: 1px solid rgba(131, 56, 236, 0.4);
+      border-radius: 12px;
+      font-size: 12px;
+      color: #8b5cf6;
+    }
+
+    .operator-tag {
+      background: rgba(255, 0, 110, 0.2);
+      border-color: rgba(255, 0, 110, 0.4);
+      color: #ff006e;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="min-h-screen p-4">
+    <!-- Header -->
+    <header class="dark-glass rounded-3xl p-8 mb-6 fade-in">
+      <div class="flex items-center justify-between flex-wrap gap-6">
+        <div>
+          <h1 class="text-5xl font-bold glow-text mb-3 flex items-center gap-3">
+            <span class="text-6xl">🚀</span>
+            Reddit Scraper Ultra Pro
+            <span class="text-2xl px-3 py-1 bg-red-500/20 border border-red-500/30 rounded-full">MASSIVE</span>
+          </h1>
+          <p class="text-gray-300 text-lg">Sistema avançado de extração massiva de posts, links e mídia do Reddit</p>
+          <div class="mt-3 flex items-center gap-4">
+            <div class="live-indicator">
+              <span class="pulse-dot"></span>
+              <span class="text-sm text-green-400">Sistema Ativo</span>
+            </div>
+            <div class="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full">
+              <span class="text-sm text-yellow-300">💬 Multi-Proxy CORS</span>
+            </div>
+            <div class="px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full">
+              <span class="text-sm text-purple-300">🔄 Paginação Automática</span>
+            </div>
+            <span class="text-gray-400 text-sm">v3.0 MASSIVE</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="stat-card rounded-xl p-4 text-center">
+            <div class="text-3xl mb-1">📝</div>
+            <div class="text-3xl font-bold text-white" id="totalPosts">0</div>
+            <div class="text-xs text-gray-400">Posts</div>
+          </div>
+          <div class="stat-card rounded-xl p-4 text-center">
+            <div class="text-3xl mb-1">🔗</div>
+            <div class="text-3xl font-bold text-white" id="totalLinks">0</div>
+            <div class="text-xs text-gray-400">Links</div>
+          </div>
+          <div class="stat-card rounded-xl p-4 text-center">
+            <div class="text-3xl mb-1">🖼️</div>
+            <div class="text-3xl font-bold text-white" id="totalImages">0</div>
+            <div class="text-xs text-gray-400">Imagens</div>
+          </div>
+          <div class="stat-card rounded-xl p-4 text-center">
+            <div class="text-3xl mb-1">💬</div>
+            <div class="text-3xl font-bold text-white" id="totalComments">0</div>
+            <div class="text-xs text-gray-400">Comentários</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Controls -->
+    <div class="dark-glass rounded-3xl p-8 mb-6 fade-in">
+      <!-- Enhanced CORS Proxy Selector -->
+      <div class="proxy-selector mb-6">
+        <h3 class="text-white font-bold mb-3 flex items-center gap-2">
+          <span>🔧</span> Configuração Avançada de Proxy CORS
+        </h3>
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div>
+            <label class="text-gray-300 text-sm mb-2 block">Lista de Proxies (um por linha):</label>
+            <textarea id="proxyList" class="w-full p-3 rounded-lg h-32" placeholder="https://corsproxy.io/?
+https://api.allorigins.win/raw?url=
+https://cors.bridged.cc/
+https://cors-anywhere.herokuapp.com/
+https://thingproxy.freeboard.io/fetch/">https://corsproxy.io/?
+https://api.allorigins.win/raw?url=
+https://cors.bridged.cc/
+https://thingproxy.freeboard.io/fetch/</textarea>
+          </div>
+          <div>
+            <label class="text-gray-300 text-sm mb-2 block">Status dos Proxies:</label>
+            <div id="proxyStatusList" class="space-y-2 max-h-32 overflow-y-auto">
+              <div class="text-gray-500 text-sm">Aguardando teste...</div>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button onclick="testAllProxies()" class="px-4 py-2 warning-button text-black rounded-lg font-semibold flex items-center gap-2">
+                <span>🧪</span> Testar Todos
+              </button>
+              <label class="flex items-center text-gray-300 cursor-pointer">
+                <input type="checkbox" id="autoRotateProxy" checked class="mr-2">
+                <span class="text-sm">Rotação Automática</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">⚠️ Sistema rotaciona automaticamente entre proxies funcionais para evitar bloqueios</p>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-8">
+        <!-- Input Section -->
+        <div>
+          <label class="text-white font-bold mb-3 block text-lg flex items-center gap-2">
+            <span>🔍</span> URLs do Reddit
+          </label>
+          <textarea
+            id="urlInput"
+            class="w-full p-4 rounded-xl text-white placeholder-gray-500 focus:placeholder-gray-400 transition-all resize-none"
+            placeholder="Cole URLs de posts, subreddits ou pesquisas do Reddit&#10;&#10;Exemplos aceitos:&#10;✓ https://reddit.com/r/programming/comments/xyz&#10;✓ https://reddit.com/r/technology/new&#10;✓ https://reddit.com/r/science/top&#10;✓ https://reddit.com/r/science/search?q=AI"
+            rows="7"
+          ></textarea>
+          
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button onclick="addExampleUrls()" class="px-4 py-2 info-button text-white rounded-lg font-semibold flex items-center gap-2">
+              <span>📝</span> Exemplos
+            </button>
+            <button onclick="pasteFromClipboard()" class="px-4 py-2 warning-button text-black rounded-lg font-semibold flex items-center gap-2">
+              <span>📋</span> Colar
+            </button>
+            <button onclick="clearUrls()" class="px-4 py-2 danger-button text-white rounded-lg font-semibold flex items-center gap-2">
+              <span>🗑️</span> Limpar
+            </button>
+          </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="space-y-5">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">📊 Número Total de Posts</label>
+              <input
+                type="number"
+                id="numPosts"
+                value="1000"
+                min="1"
+                max="50000"
+                class="w-full p-3 rounded-lg"
+              />
+            </div>
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">⚡ Posts por Lote</label>
+              <select id="batchSize" class="w-full p-3 rounded-lg">
+                <option value="25">25 por vez</option>
+                <option value="50">50 por vez</option>
+                <option value="100" selected>100 por vez (máximo Reddit)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">⏱️ Delay entre Lotes (ms)</label>
+              <input
+                type="number"
+                id="batchDelay"
+                value="2000"
+                min="500"
+                max="10000"
+                step="500"
+                class="w-full p-3 rounded-lg"
+              />
+            </div>
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">🔁 Tentativas por Falha</label>
+              <input
+                type="number"
+                id="maxRetries"
+                value="3"
+                min="1"
+                max="10"
+                class="w-full p-3 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">📅 Data Inicial</label>
+              <input
+                type="date"
+                id="startDate"
+                class="w-full p-3 rounded-lg"
+              />
+            </div>
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">📅 Data Final</label>
+              <input
+                type="date"
+                id="endDate"
+                class="w-full p-3 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <!-- Advanced Filters -->
+          <div class="space-y-3 p-4 rounded-xl bg-black/20">
+            <h3 class="text-white font-bold mb-2 flex items-center gap-2">
+              <span>⚙️</span> Configurações Avançadas
+            </h3>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="loadComments" checked class="mr-3">
+              <span>Carregar comentários automaticamente</span>
+            </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="hideNoComments" checked class="mr-3">
+              <span>Ocultar posts sem comentários</span>
+            </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="showUsernames" class="mr-3">
+              <span>Mostrar nomes de usuários</span>
+            </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="extractLinks" checked class="mr-3">
+              <span>Extrair links automaticamente</span>
+            </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="extractImages" checked class="mr-3">
+              <span>Extrair imagens automaticamente</span>
+            </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="autoSave" checked class="mr-3">
+              <span>Salvar automaticamente no navegador</span>
+            </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="removeDuplicates" checked class="mr-3">
+              <span>Remover posts duplicados</span>
+            </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="continueOnError" checked class="mr-3">
+              <span>Continuar em caso de erro</span>
+            </label>
+            <div class="mt-3 p-3 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg">
+              <p class="text-sm text-white font-semibold">💡 Sistema Massivo:</p>
+              <p class="text-xs text-gray-300 mt-1">Agora capaz de buscar milhares de posts usando paginação automática e rotação de proxies!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Batch Progress Display -->
+      <div id="batchProgress" class="batch-progress hidden">
+        <h4 class="text-white font-bold mb-3">📊 Progresso dos Lotes</h4>
+        <div id="batchList" class="space-y-2 max-h-40 overflow-y-auto">
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mt-8 flex flex-wrap gap-3 justify-center">
+        <button onclick="startMassiveScraping()" id="startButton" class="neon-button text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-3 transform hover:scale-105">
+          <span class="text-2xl">🔍</span> Iniciar Scraping Massivo
+        </button>
+        <button onclick="pauseScraping()" id="pauseButton" class="pause-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2 hidden">
+          <span>⏸️</span> Pausar
+        </button>
+        <button onclick="resumeScraping()" id="resumeButton" class="success-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2 hidden">
+          <span>▶️</span> Retomar
+        </button>
+        <button onclick="stopScraping()" id="stopButton" class="danger-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2 hidden">
+          <span>⏹️</span> Parar
+        </button>
+        <button onclick="extractAllLinks()" class="success-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
+          <span>🔗</span> Extrair Links
+        </button>
+        <button onclick="extractAllImages()" class="success-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
+          <span>🖼️</span> Extrair Imagens
+        </button>
+        <button onclick="downloadPosts('txt')" class="info-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
+          <span>📄</span> Download TXT
+        </button>
+        <button onclick="downloadPosts('html')" class="info-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
+          <span>🌐</span> Download HTML
+        </button>
+        <button onclick="downloadPosts('xlsx')" class="info-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
+          <span>📊</span> Download XLSX
+        </button>
+        <button onclick="downloadPosts('json')" class="warning-button text-black px-6 py-4 rounded-xl font-bold flex items-center gap-2">
+          <span>📦</span> Download JSON
+        </button>
+        <button onclick="clearAllData()" class="danger-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
+          <span>🗑️</span> Limpar Tudo
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="dark-glass rounded-3xl p-2 mb-6 fade-in">
+      <div class="flex gap-2 overflow-x-auto p-2">
+        <button onclick="switchTab('posts')" id="tab-posts" class="tab-button tab-active px-6 py-3 font-bold rounded-xl transition-all whitespace-nowrap">
+          📝 Posts
+        </button>
+        <button onclick="switchTab('search')" id="tab-search" class="tab-button px-6 py-3 font-bold rounded-xl transition-all whitespace-nowrap relative">
+          🔍 Busca Avançada
+          <span id="searchResultsCount" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-2 py-1">0</span>
+        </button>
+        <button onclick="switchTab('links')" id="tab-links" class="tab-button px-6 py-3 font-bold rounded-xl transition-all whitespace-nowrap">
+          🔗 Links
+        </button>
+        <button onclick="switchTab('images')" id="tab-images" class="tab-button px-6 py-3 font-bold rounded-xl transition-all whitespace-nowrap">
+          🖼️ Imagens
+        </button>
+        <button onclick="switchTab('gallery')" id="tab-gallery" class="tab-button px-6 py-3 font-bold rounded-xl transition-all whitespace-nowrap">
+          🎨 Galeria Completa
+        </button>
+        <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-button px-6 py-3 font-bold rounded-xl transition-all whitespace-nowrap">
+          📊 Analytics
+        </button>
+        <button onclick="switchTab('timeline')" id="tab-timeline" class="tab-button px-6 py-3 font-bold rounded-xl transition-all whitespace-nowrap">
+          📅 Timeline
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div id="contentArea" class="dark-glass rounded-3xl p-8 fade-in min-h-[600px]">
+      <!-- Posts Tab -->
+      <div id="content-posts" class="space-y-4">
+        <div class="text-center py-20">
+          <div class="text-8xl mb-6 animate-pulse">📭</div>
+          <p class="text-2xl text-gray-300 mb-3">Nenhum post carregado ainda</p>
+          <p class="text-gray-500">Cole URLs do Reddit acima e clique em "Iniciar Scraping Massivo"</p>
+        </div>
+      </div>
+
+      <!-- Advanced Search Tab -->
+      <div id="content-search" class="hidden">
+        <div class="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl p-6 mb-6">
+          <h3 class="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            <span>🔍</span> Busca Avançada com Operadores Booleanos
+          </h3>
+          
+          <!-- Search Query Input -->
+          <div class="mb-4">
+            <label class="text-gray-300 text-sm mb-2 block font-semibold">Query de Busca:</label>
+            <textarea
+              id="searchQuery"
+              class="w-full p-4 rounded-xl text-white placeholder-gray-500 bg-black/30"
+              placeholder='Exemplos:&#10;("XEN45" OR "XEN 45") AND glaucoma&#10;"machine learning" AND (python OR javascript)&#10;reddit NOT "karma farming"&#10;&#10;Operadores suportados: AND, OR, NOT, ( ), " "'
+              rows="4"
+            ></textarea>
+          </div>
+          
+          <!-- Search Options -->
+          <div class="grid lg:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">Buscar em:</label>
+              <select id="searchScope" class="w-full p-3 rounded-lg">
+                <option value="both">Posts e Comentários</option>
+                <option value="posts">Apenas Posts</option>
+                <option value="comments">Apenas Comentários</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">Campos do Post:</label>
+              <select id="searchFields" class="w-full p-3 rounded-lg">
+                <option value="all">Todos os campos</option>
+                <option value="title">Apenas Título</option>
+                <option value="content">Apenas Conteúdo</option>
+                <option value="title_content">Título e Conteúdo</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-gray-300 text-sm mb-2 block font-semibold">Sensibilidade:</label>
+              <select id="searchCase" class="w-full p-3 rounded-lg">
+                <option value="insensitive">Case Insensitive</option>
+                <option value="sensitive">Case Sensitive</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Search Controls -->
+          <div class="flex flex-wrap gap-3">
+            <button onclick="executeSearch()" class="neon-button text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2">
+              <span>🔍</span> Buscar
+            </button>
+            <button onclick="clearSearch()" class="danger-button text-white px-4 py-3 rounded-lg font-bold flex items-center gap-2">
+              <span>🗑️</span> Limpar
+            </button>
+            <button onclick="addSearchExample()" class="info-button text-white px-4 py-3 rounded-lg font-bold flex items-center gap-2">
+              <span>📝</span> Exemplo
+            </button>
+            <button onclick="showSearchHistory()" class="warning-button text-black px-4 py-3 rounded-lg font-bold flex items-center gap-2">
+              <span>📜</span> Histórico
+            </button>
+            <button onclick="exportSearchResults()" id="exportSearchBtn" class="success-button text-white px-4 py-3 rounded-lg font-bold flex items-center gap-2 hidden">
+              <span>📥</span> Exportar Resultados
+            </button>
+          </div>
+          
+          <!-- Query Helper -->
+          <div class="mt-4 p-4 bg-black/20 rounded-lg">
+            <h4 class="text-white font-semibold mb-2">💡 Guia de Operadores:</h4>
+            <div class="grid md:grid-cols-2 gap-3 text-sm text-gray-300">
+              <div>
+                <code class="text-cyan-400">AND</code> - Ambos os termos devem estar presentes<br>
+                <code class="text-cyan-400">OR</code> - Pelo menos um termo deve estar presente<br>
+                <code class="text-cyan-400">NOT</code> - Exclui termos da busca
+              </div>
+              <div>
+                <code class="text-cyan-400">"termo"</code> - Busca exata da frase<br>
+                <code class="text-cyan-400">( )</code> - Agrupa termos para precedência<br>
+                <code class="text-cyan-400">*</code> - Wildcard (ex: prog* = programming, program, etc)
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Search Statistics -->
+        <div id="searchStats" class="hidden mb-6 p-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-xl">
+          <div class="flex justify-between items-center">
+            <div class="text-white">
+              <span class="text-xl font-bold">📊 Resultados:</span>
+              <span id="searchStatsText" class="ml-3"></span>
+            </div>
+            <div class="text-gray-300">
+              <span id="searchTime"></span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Search Results -->
+        <div id="searchResults" class="space-y-4">
+          <div class="text-center py-20">
+            <div class="text-8xl mb-6 opacity-50">🔍</div>
+            <p class="text-xl text-gray-400">Digite uma query de busca acima</p>
+            <p class="text-sm text-gray-500 mt-2">Use operadores booleanos para buscas complexas</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Links Tab -->
+      <div id="content-links" class="hidden">
+        <div class="mb-6 flex justify-between items-center">
+          <h3 class="text-2xl font-bold flex items-center gap-2">
+            <span>🔗</span> Links Extraídos
+          </h3>
+          <div class="flex gap-2">
+            <button onclick="filterLinks('all')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all">
+              Todos
+            </button>
+            <button onclick="filterLinks('external')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all">
+              Externos
+            </button>
+            <button onclick="copyAllLinks()" class="success-button px-4 py-2 text-white rounded-lg font-bold flex items-center gap-2">
+              <span>📋</span> Copiar Todos
+            </button>
+          </div>
+        </div>
+        <div id="linksList" class="space-y-2">
+          <div class="text-center py-20">
+            <div class="text-8xl mb-6 opacity-50">🔗</div>
+            <p class="text-xl text-gray-400">Nenhum link extraído ainda</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Images Tab -->
+      <div id="content-images" class="hidden">
+        <div class="mb-6 flex justify-between items-center">
+          <h3 class="text-2xl font-bold flex items-center gap-2">
+            <span>🖼️</span> Galeria de Imagens
+          </h3>
+          <button onclick="downloadAllImages()" class="success-button px-4 py-2 text-white rounded-lg font-bold flex items-center gap-2">
+            <span>💾</span> Baixar Todas
+          </button>
+        </div>
+        <div id="imagesGrid" class="media-grid">
+          <div class="text-center py-20 col-span-full">
+            <div class="text-8xl mb-6 opacity-50">🖼️</div>
+            <p class="text-xl text-gray-400">Nenhuma imagem encontrada</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gallery Tab -->
+      <div id="content-gallery" class="hidden">
+        <div class="mb-6">
+          <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+            <span>🎨</span> Galeria Completa de Mídia
+          </h3>
+          <div id="galleryGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="text-center py-20 col-span-full">
+              <div class="text-8xl mb-6 opacity-50">🎨</div>
+              <p class="text-xl text-gray-400">Nenhuma mídia disponível</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Tab -->
+      <div id="content-analytics" class="hidden">
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+          <div class="stat-card rounded-xl p-6">
+            <div class="text-4xl mb-3">📈</div>
+            <div class="text-3xl font-bold text-white" id="avgComments">0</div>
+            <div class="text-sm text-gray-400">Média de Comentários</div>
+          </div>
+          <div class="stat-card rounded-xl p-6">
+            <div class="text-4xl mb-3">🔥</div>
+            <div class="text-2xl font-bold text-white" id="topSubreddit">-</div>
+            <div class="text-sm text-gray-400">Subreddit Mais Ativo</div>
+          </div>
+          <div class="stat-card rounded-xl p-6">
+            <div class="text-4xl mb-3">⏰</div>
+            <div class="text-lg font-bold text-white" id="dateRange">-</div>
+            <div class="text-sm text-gray-400">Período dos Posts</div>
+          </div>
+        </div>
+        <div id="chartsContainer"></div>
+      </div>
+
+      <!-- Timeline Tab -->
+      <div id="content-timeline" class="hidden">
+        <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
+          <span>📅</span> Timeline dos Posts
+        </h3>
+        <div id="timelineContainer" class="space-y-4">
+          <div class="text-center py-20">
+            <div class="text-8xl mb-6 opacity-50">📅</div>
+            <p class="text-xl text-gray-400">Nenhuma atividade registrada</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 hidden">
+      <div class="dark-glass rounded-3xl p-10 text-center max-w-md">
+        <div class="loading-spinner mx-auto mb-6"></div>
+        <p class="text-2xl font-bold text-white mb-2">Processando...</p>
+        <p class="text-gray-300" id="loadingStatus">Iniciando scraping massivo...</p>
+        <div class="mt-4 w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+          <div id="progressBar" class="h-full neon-gradient transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p class="text-sm text-gray-400 mt-2" id="progressText">0%</p>
+        <div class="mt-4 text-xs text-gray-500">
+          <span id="batchInfo"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 hidden" onclick="closeImageModal()">
+      <div class="relative max-w-4xl max-h-[90vh] p-4">
+        <img id="modalImage" src="" alt="" class="max-w-full max-h-full rounded-xl shadow-2xl">
+        <button onclick="closeImageModal()" class="absolute top-2 right-2 text-white bg-black/50 rounded-full p-2 hover:bg-black/70 transition-all">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+  </div>
+
+  <script>
+    // Global state
+    let posts = [];
+    let extractedLinks = [];
+    let extractedImages = [];
+    let currentTab = 'posts';
+    let isLoading = false;
+    let isPaused = false;
+    let isStopped = false;
+    let abortController = null;
+    let workingProxies = [];
+    let currentProxyIndex = 0;
+    let batchResults = [];
+    let scrapingSession = null;
+    let searchResults = [];
+    let lastSearchQuery = '';
+    let searchHistory = [];
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadFromLocalStorage();
+      updateStats();
+      setDefaultDates();
+      initializeProxies();
+      
+      // Add keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        // Ctrl/Cmd + K for search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+          e.preventDefault();
+          switchTab('search');
+          document.getElementById('searchQuery').focus();
+        }
+        // Ctrl/Cmd + Enter to execute search when in search tab
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && currentTab === 'search') {
+          executeSearch();
+        }
+      });
+      
+      // Welcome message
+      if (posts.length === 0) {
+        showNotification('🚀 Sistema Massivo com Busca Booleana pronto! Use Ctrl+K para buscar', 'info');
+      }
+      
+      console.log('🚀 Reddit Scraper Ultra Pro MASSIVE inicializado!');
+      console.log('💪 Sistema com paginação automática, rotação de proxies e busca booleana');
+      console.log('🔍 Use Ctrl+K para abrir a busca avançada');
+    });
+
+    // Set default dates
+    function setDefaultDates() {
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - 30);
+      const endDate = new Date(today);
+      endDate.setDate(today.getDate() - 1);
+      document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+      document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+    }
+
+    // Initialize proxies
+    function initializeProxies() {
+      const proxyList = document.getElementById('proxyList').value.trim().split('\n').filter(p => p);
+      workingProxies = proxyList.map(proxy => ({
+        url: proxy.trim(),
+        status: 'untested',
+        lastUsed: 0,
+        failCount: 0
+      }));
+    }
+
+    // Test all proxies
+    async function testAllProxies() {
+      const statusList = document.getElementById('proxyStatusList');
+      statusList.innerHTML = '<div class="text-gray-400">Testando proxies...</div>';
+      
+      initializeProxies();
+      
+      const testUrl = 'https://www.reddit.com/r/test.json?limit=1';
+      const results = [];
+      
+      for (let i = 0; i < workingProxies.length; i++) {
+        const proxy = workingProxies[i];
+        try {
+          const response = await fetch(proxy.url + encodeURIComponent(testUrl), {
+            signal: AbortSignal.timeout(5000)
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.data) {
+              proxy.status = 'working';
+              results.push(`<div class="proxy-status proxy-working">✅ ${proxy.url.substring(0, 30)}...</div>`);
+            } else {
+              throw new Error('Invalid response');
+            }
+          } else {
+            throw new Error('Response not OK');
+          }
+        } catch (error) {
+          proxy.status = 'failed';
+          results.push(`<div class="proxy-status proxy-failed">❌ ${proxy.url.substring(0, 30)}...</div>`);
+        }
+      }
+      
+      statusList.innerHTML = results.join('');
+      
+      const workingCount = workingProxies.filter(p => p.status === 'working').length;
+      if (workingCount > 0) {
+        showNotification(`✅ ${workingCount} de ${workingProxies.length} proxies funcionando!`, 'success');
+      } else {
+        showNotification('❌ Nenhum proxy funcionando! Adicione mais proxies.', 'error');
+      }
+    }
+
+    // Get next working proxy
+    function getNextProxy() {
+      const autoRotate = document.getElementById('autoRotateProxy').checked;
+      
+      if (!autoRotate) {
+        // Use first working proxy
+        const working = workingProxies.find(p => p.status === 'working');
+        return working ? working.url : workingProxies[0].url;
+      }
+      
+      // Find available working proxies
+      const available = workingProxies.filter(p => 
+        p.status === 'working' || p.status === 'untested'
+      );
+      
+      if (available.length === 0) {
+        // Reset all proxies if all failed
+        workingProxies.forEach(p => {
+          if (p.failCount > 0) p.failCount--;
+          if (p.failCount < 3) p.status = 'untested';
+        });
+        return workingProxies[0].url;
+      }
+      
+      // Rotate through available proxies
+      currentProxyIndex = (currentProxyIndex + 1) % available.length;
+      const proxy = available[currentProxyIndex];
+      proxy.lastUsed = Date.now();
+      
+      return proxy.url;
+    }
+
+    // Mark proxy as failed
+    function markProxyFailed(proxyUrl) {
+      const proxy = workingProxies.find(p => p.url === proxyUrl);
+      if (proxy) {
+        proxy.failCount++;
+        if (proxy.failCount >= 3) {
+          proxy.status = 'failed';
+        }
+      }
+    }
+
+    // Fetch with retry and proxy rotation
+    async function fetchWithRetry(url, maxRetries = 3) {
+      let lastError = null;
+      
+      for (let i = 0; i < maxRetries; i++) {
+        if (isStopped) throw new Error('Scraping stopped by user');
+        
+        const proxy = getNextProxy();
+        const proxyUrl = proxy + encodeURIComponent(url);
+        
+        try {
+          console.log(`Tentativa ${i + 1}/${maxRetries} com proxy: ${proxy.substring(0, 30)}...`);
+          
+          const response = await fetch(proxyUrl, {
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data && (data.data || (Array.isArray(data) && data.length > 0))) {
+              return data;
+            }
+          }
+          
+          throw new Error(`Response not OK: ${response.status}`);
+        } catch (error) {
+          lastError = error;
+          markProxyFailed(proxy);
+          console.error(`Erro na tentativa ${i + 1}:`, error.message);
+          
+          // Wait before retry with exponential backoff
+          if (i < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, (i + 1) * 1000));
+          }
+        }
+      }
+      
+      throw lastError || new Error('Max retries reached');
+    }
+
+    // Main massive scraping function
+    async function startMassiveScraping() {
+      const urlInput = document.getElementById('urlInput').value.trim();
+      if (!urlInput) {
+        showNotification('⚠️ Por favor, insira URLs do Reddit', 'warning');
+        return;
+      }
+
+      // Reset states
+      isStopped = false;
+      isPaused = false;
+      batchResults = [];
+      
+      // UI updates
+      document.getElementById('startButton').classList.add('hidden');
+      document.getElementById('pauseButton').classList.remove('hidden');
+      document.getElementById('stopButton').classList.remove('hidden');
+      document.getElementById('batchProgress').classList.remove('hidden');
+      
+      const urls = urlInput.split('\n').map(u => u.trim()).filter(u => u);
+      const totalPostsWanted = parseInt(document.getElementById('numPosts').value);
+      const batchSize = parseInt(document.getElementById('batchSize').value);
+      const batchDelay = parseInt(document.getElementById('batchDelay').value);
+      const loadComments = document.getElementById('loadComments').checked;
+      const maxRetries = parseInt(document.getElementById('maxRetries').value);
+      
+      setLoading(true, 'Iniciando scraping massivo...', 0);
+      
+      // Start scraping session
+      scrapingSession = {
+        urls,
+        totalPostsWanted,
+        batchSize,
+        batchDelay,
+        loadComments,
+        maxRetries,
+        startTime: Date.now(),
+        processedUrls: 0,
+        totalPostsCollected: 0,
+        totalCommentsCollected: 0,
+        errors: []
+      };
+      
+      showNotification(`🚀 Iniciando busca massiva de ${totalPostsWanted} posts!`, 'info');
+      
+      try {
+        for (let urlIndex = 0; urlIndex < urls.length; urlIndex++) {
+          if (isStopped) break;
+          
+          const url = urls[urlIndex];
+          scrapingSession.processedUrls++;
+          
+          setLoading(true, `Processando URL ${urlIndex + 1} de ${urls.length}...`, 
+            Math.round((urlIndex / urls.length) * 100));
+          
+          try {
+            if (url.includes('/comments/')) {
+              // Single post
+              await processSinglePost(url);
+            } else if (url.includes('/search')) {
+              // Search results with pagination
+              await processSearchWithPagination(url);
+            } else if (url.includes('/r/')) {
+              // Subreddit with pagination
+              await processSubredditWithPagination(url);
+            }
+          } catch (error) {
+            console.error('Error processing URL:', error);
+            scrapingSession.errors.push({ url, error: error.message });
+            
+            if (!document.getElementById('continueOnError').checked) {
+              throw error;
+            }
+          }
+          
+          // Check if we have enough posts
+          if (posts.length >= totalPostsWanted) {
+            showNotification(`✅ Meta atingida! ${posts.length} posts coletados!`, 'success');
+            break;
+          }
+        }
+      } finally {
+        finishScraping();
+      }
+    }
+
+    // Process single post
+    async function processSinglePost(url) {
+      const post = await fetchRedditPost(url);
+      if (post) {
+        addPost(post);
+        updateBatchProgress('Post individual', 1, 1, 'complete');
+      }
+    }
+
+    // Process search with pagination
+    async function processSearchWithPagination(url) {
+      const urlObj = new URL(url);
+      const query = urlObj.searchParams.get('q') || '';
+      const subreddit = urlObj.pathname.split('/')[2];
+      const totalWanted = scrapingSession.totalPostsWanted;
+      const batchSize = scrapingSession.batchSize;
+      
+      let after = null;
+      let batchNumber = 0;
+      let collected = 0;
+      
+      while (collected < totalWanted && !isStopped) {
+        if (isPaused) {
+          await waitForResume();
+        }
+        
+        batchNumber++;
+        const remaining = totalWanted - collected;
+        const limit = Math.min(batchSize, remaining);
+        
+        updateBatchProgress(`Pesquisa - Lote ${batchNumber}`, collected, totalWanted, 'loading');
+        
+        let apiUrl = `https://www.reddit.com/r/${subreddit}/search.json?q=${encodeURIComponent(query)}&restrict_sr=on&limit=${limit}&sort=new`;
+        if (after) apiUrl += `&after=${after}`;
+        
+        try {
+          const data = await fetchWithRetry(apiUrl, scrapingSession.maxRetries);
+          
+          if (!data || !data.data || !data.data.children || data.data.children.length === 0) {
+            console.log('Sem mais resultados na pesquisa');
+            break;
+          }
+          
+          const newPosts = await processBatchPosts(data.data.children);
+          collected += newPosts.length;
+          
+          // Get next page token
+          after = data.data.after;
+          if (!after) break;
+          
+          updateBatchProgress(`Pesquisa - Lote ${batchNumber}`, collected, totalWanted, 'complete');
+          
+          // Delay between batches
+          if (collected < totalWanted && after) {
+            await new Promise(resolve => setTimeout(resolve, scrapingSession.batchDelay));
+          }
+        } catch (error) {
+          updateBatchProgress(`Pesquisa - Lote ${batchNumber}`, collected, totalWanted, 'error');
+          throw error;
+        }
+      }
+    }
+
+    // Process subreddit with pagination
+    async function processSubredditWithPagination(url) {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/').filter(p => p);
+      const subreddit = pathParts[1];
+      const sort = pathParts[2] || 'hot';
+      const totalWanted = scrapingSession.totalPostsWanted;
+      const batchSize = scrapingSession.batchSize;
+      
+      let after = null;
+      let batchNumber = 0;
+      let collected = 0;
+      
+      while (collected < totalWanted && !isStopped) {
+        if (isPaused) {
+          await waitForResume();
+        }
+        
+        batchNumber++;
+        const remaining = totalWanted - collected;
+        const limit = Math.min(batchSize, remaining);
+        
+        updateBatchProgress(`r/${subreddit} - Lote ${batchNumber}`, collected, totalWanted, 'loading');
+        
+        let apiUrl = `https://www.reddit.com/r/${subreddit}/${sort}.json?limit=${limit}`;
+        if (after) apiUrl += `&after=${after}`;
+        
+        try {
+          const data = await fetchWithRetry(apiUrl, scrapingSession.maxRetries);
+          
+          if (!data || !data.data || !data.data.children || data.data.children.length === 0) {
+            console.log('Sem mais posts no subreddit');
+            break;
+          }
+          
+          const newPosts = await processBatchPosts(data.data.children);
+          collected += newPosts.length;
+          
+          // Get next page token
+          after = data.data.after;
+          if (!after) break;
+          
+          updateBatchProgress(`r/${subreddit} - Lote ${batchNumber}`, collected, totalWanted, 'complete');
+          
+          // Delay between batches
+          if (collected < totalWanted && after) {
+            await new Promise(resolve => setTimeout(resolve, scrapingSession.batchDelay));
+          }
+        } catch (error) {
+          updateBatchProgress(`r/${subreddit} - Lote ${batchNumber}`, collected, totalWanted, 'error');
+          throw error;
+        }
+      }
+    }
+
+    // Process batch of posts
+    async function processBatchPosts(children) {
+      const newPosts = [];
+      
+      for (let i = 0; i < children.length; i++) {
+        if (isStopped) break;
+        
+        const child = children[i];
+        const postData = child.data;
+        
+        const post = {
+          id: postData.id,
+          title: postData.title,
+          author: postData.author,
+          subreddit: postData.subreddit,
+          content: postData.selftext || '',
+          url: `https://reddit.com${postData.permalink}`,
+          created: postData.created_utc,
+          score: postData.score,
+          num_comments: postData.num_comments,
+          thumbnail: postData.thumbnail,
+          preview: postData.preview,
+          comments: []
+        };
+        
+        // Load comments if enabled
+        if (scrapingSession.loadComments && postData.num_comments > 0) {
+          try {
+            const fullPost = await fetchRedditPost(post.url);
+            if (fullPost && fullPost.comments) {
+              post.comments = fullPost.comments;
+              scrapingSession.totalCommentsCollected += countComments(post.comments);
+            }
+          } catch (error) {
+            console.error(`Erro ao buscar comentários:`, error);
+          }
+        }
+        
+        if (addPost(post)) {
+          newPosts.push(post);
+        }
+      }
+      
+      return newPosts;
+    }
+
+    // Add post to collection
+    function addPost(post) {
+      // Check for duplicates
+      if (document.getElementById('removeDuplicates').checked) {
+        if (posts.find(p => p.id === post.id)) {
+          return false;
+        }
+      }
+      
+      posts.push(post);
+      scrapingSession.totalPostsCollected++;
+      
+      // Auto-save
+      if (document.getElementById('autoSave').checked) {
+        saveToLocalStorage();
+      }
+      
+      updateStats();
+      return true;
+    }
+
+    // Update batch progress display
+    function updateBatchProgress(name, current, total, status) {
+      const batchList = document.getElementById('batchList');
+      const batchId = `batch-${name.replace(/\s/g, '-')}`;
+      
+      let batchElement = document.getElementById(batchId);
+      if (!batchElement) {
+        batchElement = document.createElement('div');
+        batchElement.id = batchId;
+        batchList.appendChild(batchElement);
+      }
+      
+      const statusClass = status === 'complete' ? 'batch-complete' : 
+                         status === 'error' ? 'batch-error' : 'batch-loading';
+      
+      const statusIcon = status === 'complete' ? '✅' : 
+                        status === 'error' ? '❌' : '⏳';
+      
+      batchElement.className = `batch-item ${statusClass}`;
+      batchElement.innerHTML = `
+        <span>${statusIcon} ${name}</span>
+        <span>${current}/${total}</span>
+      `;
+      
+      // Update global progress
+      document.getElementById('batchInfo').textContent = 
+        `${scrapingSession.totalPostsCollected} posts • ${scrapingSession.totalCommentsCollected} comentários`;
+    }
+
+    // Wait for resume when paused
+    async function waitForResume() {
+      while (isPaused && !isStopped) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // Pause scraping
+    function pauseScraping() {
+      isPaused = true;
+      document.getElementById('pauseButton').classList.add('hidden');
+      document.getElementById('resumeButton').classList.remove('hidden');
+      showNotification('⏸️ Scraping pausado', 'info');
+    }
+
+    // Resume scraping
+    function resumeScraping() {
+      isPaused = false;
+      document.getElementById('resumeButton').classList.add('hidden');
+      document.getElementById('pauseButton').classList.remove('hidden');
+      showNotification('▶️ Scraping retomado', 'success');
+    }
+
+    // Stop scraping
+    function stopScraping() {
+      isStopped = true;
+      isPaused = false;
+      finishScraping();
+      showNotification('⏹️ Scraping parado pelo usuário', 'warning');
+    }
+
+    // Finish scraping
+    function finishScraping() {
+      setLoading(false);
+      
+      // UI updates
+      document.getElementById('startButton').classList.remove('hidden');
+      document.getElementById('pauseButton').classList.add('hidden');
+      document.getElementById('resumeButton').classList.add('hidden');
+      document.getElementById('stopButton').classList.add('hidden');
+      
+      if (scrapingSession) {
+        const duration = Math.round((Date.now() - scrapingSession.startTime) / 1000);
+        const summary = `
+          ✅ Scraping concluído!
+          📝 ${scrapingSession.totalPostsCollected} posts coletados
+          💬 ${scrapingSession.totalCommentsCollected} comentários
+          ⏱️ Tempo: ${duration}s
+          ${scrapingSession.errors.length > 0 ? `⚠️ ${scrapingSession.errors.length} erros` : ''}
+        `;
+        
+        showNotification(summary.trim(), 'success');
+        
+        // Auto extract if enabled
+        if (document.getElementById('extractLinks').checked) {
+          setTimeout(() => extractAllLinks(), 1000);
+        }
+        if (document.getElementById('extractImages').checked) {
+          setTimeout(() => extractAllImages(), 2000);
+        }
+        
+        // Show posts
+        switchTab('posts');
+      }
+    }
+
+    // Fetch Reddit post with comments
+    async function fetchRedditPost(url) {
+      try {
+        console.log(`🔍 Buscando post: ${url}`);
+        
+        const postId = url.match(/comments\/([a-z0-9]+)/i)?.[1];
+        if (!postId) throw new Error('Invalid post URL');
+
+        let jsonUrl = url.replace(/\/$/, '');
+        if (!jsonUrl.endsWith('.json')) {
+          jsonUrl += '.json';
+        }
+        
+        const data = await fetchWithRetry(jsonUrl);
+        
+        const post = data[0]?.data?.children[0]?.data;
+        if (!post) throw new Error('Post data not found');
+
+        const comments = extractComments(data[1]?.data?.children || []);
+        
+        return {
+          id: post.id,
+          title: post.title,
+          author: post.author,
+          subreddit: post.subreddit,
+          content: post.selftext || '',
+          url: url,
+          created: post.created_utc,
+          score: post.score,
+          num_comments: post.num_comments,
+          thumbnail: post.thumbnail,
+          preview: post.preview,
+          comments: comments
+        };
+      } catch (error) {
+        console.error('❌ Erro ao buscar post:', error);
+        return null;
+      }
+    }
+
+    // Extract comments recursively
+    function extractComments(commentsData) {
+      return commentsData
+        .filter(c => c.kind === 't1')
+        .map(c => ({
+          id: c.data.id,
+          author: c.data.author,
+          body: c.data.body || '',
+          body_html: c.data.body_html || '',
+          score: c.data.score,
+          created: c.data.created_utc,
+          replies: c.data.replies?.data?.children ? extractComments(c.data.replies.data.children) : []
+        }));
+    }
+
+    // Paste from clipboard
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById('urlInput').value = text;
+        showNotification('📋 Conteúdo colado!', 'success');
+      } catch (err) {
+        showNotification('❌ Erro ao colar', 'error');
+      }
+    }
+
+    // Tab switching
+    function switchTab(tab) {
+      currentTab = tab;
+      
+      document.querySelectorAll('[id^="tab-"]').forEach(t => {
+        t.classList.remove('tab-active');
+      });
+      document.getElementById(`tab-${tab}`).classList.add('tab-active');
+      
+      document.querySelectorAll('[id^="content-"]').forEach(c => c.classList.add('hidden'));
+      document.getElementById(`content-${tab}`).classList.remove('hidden');
+      
+      if (tab === 'posts') renderPosts();
+      if (tab === 'search') renderSearchResults();
+      if (tab === 'links') renderLinks();
+      if (tab === 'images') renderImages();
+      if (tab === 'gallery') renderGallery();
+      if (tab === 'analytics') renderAnalytics();
+      if (tab === 'timeline') renderTimeline();
+    }
+
+    // ==================== ADVANCED SEARCH FUNCTIONS ====================
+
+    // Parse boolean query into AST
+    function parseSearchQuery(query) {
+      // Remove extra spaces and normalize operators
+      query = query.trim()
+        .replace(/\s+AND\s+/gi, ' AND ')
+        .replace(/\s+OR\s+/gi, ' OR ')
+        .replace(/\s+NOT\s+/gi, ' NOT ');
+      
+      return query;
+    }
+
+    // Tokenize search query
+    function tokenizeQuery(query) {
+      const tokens = [];
+      let current = '';
+      let inQuotes = false;
+      let depth = 0;
+      
+      for (let i = 0; i < query.length; i++) {
+        const char = query[i];
+        
+        if (char === '"') {
+          if (inQuotes) {
+            tokens.push({ type: 'PHRASE', value: current });
+            current = '';
+            inQuotes = false;
+          } else {
+            if (current) {
+              tokens.push({ type: 'TERM', value: current });
+              current = '';
+            }
+            inQuotes = true;
+          }
+        } else if (inQuotes) {
+          current += char;
+        } else if (char === '(') {
+          if (current) {
+            tokens.push({ type: 'TERM', value: current });
+            current = '';
+          }
+          tokens.push({ type: 'LPAREN' });
+          depth++;
+        } else if (char === ')') {
+          if (current) {
+            tokens.push({ type: 'TERM', value: current });
+            current = '';
+          }
+          tokens.push({ type: 'RPAREN' });
+          depth--;
+        } else if (char === ' ') {
+          if (current) {
+            if (current === 'AND' || current === 'OR' || current === 'NOT') {
+              tokens.push({ type: 'OPERATOR', value: current });
+            } else {
+              tokens.push({ type: 'TERM', value: current });
+            }
+            current = '';
+          }
+        } else {
+          current += char;
+        }
+      }
+      
+      if (current) {
+        if (inQuotes) {
+          tokens.push({ type: 'PHRASE', value: current });
+        } else if (current === 'AND' || current === 'OR' || current === 'NOT') {
+          tokens.push({ type: 'OPERATOR', value: current });
+        } else {
+          tokens.push({ type: 'TERM', value: current });
+        }
+      }
+      
+      return tokens;
+    }
+
+    // Evaluate search tokens against text
+    function evaluateSearch(tokens, text, caseSensitive = false) {
+      if (!text) return false;
+      
+      const searchText = caseSensitive ? text : text.toLowerCase();
+      let result = false;
+      let currentOp = 'OR';
+      let notNext = false;
+      let groupStack = [];
+      let currentGroup = { result: false, op: 'OR' };
+      
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        
+        if (token.type === 'LPAREN') {
+          groupStack.push(currentGroup);
+          currentGroup = { result: false, op: 'OR' };
+        } else if (token.type === 'RPAREN') {
+          const groupResult = currentGroup.result;
+          currentGroup = groupStack.pop() || { result: false, op: 'OR' };
+          
+          const matchResult = notNext ? !groupResult : groupResult;
+          notNext = false;
+          
+          if (currentGroup.op === 'AND') {
+            currentGroup.result = currentGroup.result && matchResult;
+          } else if (currentGroup.op === 'OR') {
+            currentGroup.result = currentGroup.result || matchResult;
+          } else {
+            currentGroup.result = matchResult;
+          }
+        } else if (token.type === 'OPERATOR') {
+          if (token.value === 'NOT') {
+            notNext = true;
+          } else {
+            currentGroup.op = token.value;
+          }
+        } else if (token.type === 'TERM' || token.type === 'PHRASE') {
+          let searchValue = caseSensitive ? token.value : token.value.toLowerCase();
+          
+          // Handle wildcards
+          let match = false;
+          if (searchValue.includes('*')) {
+            const regex = new RegExp(searchValue.replace(/\*/g, '.*'), caseSensitive ? 'g' : 'gi');
+            match = regex.test(text);
+          } else {
+            match = searchText.includes(searchValue);
+          }
+          
+          if (notNext) {
+            match = !match;
+            notNext = false;
+          }
+          
+          if (currentGroup.op === 'AND') {
+            currentGroup.result = currentGroup.result && match;
+          } else if (currentGroup.op === 'OR') {
+            currentGroup.result = currentGroup.result || match;
+          } else {
+            currentGroup.result = match;
+          }
+        }
+      }
+      
+      return currentGroup.result;
+    }
+
+    // Execute search
+    function executeSearch() {
+      const query = document.getElementById('searchQuery').value.trim();
+      if (!query) {
+        showNotification('⚠️ Digite uma query de busca', 'warning');
+        return;
+      }
+      
+      if (posts.length === 0) {
+        showNotification('⚠️ Nenhum post carregado para buscar', 'warning');
+        return;
+      }
+      
+      const startTime = Date.now();
+      const scope = document.getElementById('searchScope').value;
+      const fields = document.getElementById('searchFields').value;
+      const caseSensitive = document.getElementById('searchCase').value === 'sensitive';
+      
+      lastSearchQuery = query;
+      searchResults = [];
+      
+      const tokens = tokenizeQuery(parseSearchQuery(query));
+      console.log('Search tokens:', tokens);
+      
+      // Search through posts
+      posts.forEach(post => {
+        let postMatched = false;
+        let matchedIn = [];
+        
+        // Search in post fields
+        if (scope === 'posts' || scope === 'both') {
+          let searchText = '';
+          
+          if (fields === 'all' || fields === 'title' || fields === 'title_content') {
+            searchText += post.title + ' ';
+          }
+          if (fields === 'all' || fields === 'content' || fields === 'title_content') {
+            searchText += post.content + ' ';
+          }
+          if (fields === 'all') {
+            searchText += post.subreddit + ' ' + post.author + ' ';
+          }
+          
+          if (evaluateSearch(tokens, searchText, caseSensitive)) {
+            postMatched = true;
+            matchedIn.push('post');
+          }
+        }
+        
+        // Search in comments
+        let matchedComments = [];
+        if ((scope === 'comments' || scope === 'both') && post.comments) {
+          matchedComments = searchInComments(post.comments, tokens, caseSensitive);
+          if (matchedComments.length > 0) {
+            postMatched = true;
+            matchedIn.push(`${matchedComments.length} comentário(s)`);
+          }
+        }
+        
+        if (postMatched) {
+          searchResults.push({
+            post: post,
+            matchedIn: matchedIn,
+            matchedComments: matchedComments
+          });
+        }
+      });
+      
+      const endTime = Date.now();
+      const searchTime = ((endTime - startTime) / 1000).toFixed(2);
+      
+      // Update UI
+      document.getElementById('searchStats').classList.remove('hidden');
+      document.getElementById('searchStatsText').textContent = 
+        `${searchResults.length} posts encontrados`;
+      document.getElementById('searchTime').textContent = 
+        `Tempo de busca: ${searchTime}s`;
+      
+      // Update search results count badge
+      const badge = document.getElementById('searchResultsCount');
+      if (searchResults.length > 0) {
+        badge.textContent = searchResults.length;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+      
+      // Show export button if results
+      document.getElementById('exportSearchBtn').classList.toggle('hidden', searchResults.length === 0);
+      
+      // Save to search history
+      if (searchResults.length > 0) {
+        const savedHistory = localStorage.getItem('redditSearchHistory');
+        if (savedHistory) {
+          searchHistory = JSON.parse(savedHistory);
+        }
+        
+        searchHistory.push({
+          query: query,
+          results: searchResults.length,
+          timestamp: Date.now()
+        });
+        
+        // Keep only last 50 searches
+        if (searchHistory.length > 50) {
+          searchHistory = searchHistory.slice(-50);
+        }
+        
+        localStorage.setItem('redditSearchHistory', JSON.stringify(searchHistory));
+      }
+      
+      renderSearchResults();
+      
+      showNotification(
+        searchResults.length > 0 
+          ? `✅ ${searchResults.length} resultados encontrados!` 
+          : '❌ Nenhum resultado encontrado',
+        searchResults.length > 0 ? 'success' : 'warning'
+      );
+    }
+
+    // Search in comments recursively
+    function searchInComments(comments, tokens, caseSensitive, depth = 0) {
+      let matches = [];
+      
+      comments.forEach(comment => {
+        if (evaluateSearch(tokens, comment.body, caseSensitive)) {
+          matches.push({ comment, depth });
+        }
+        
+        if (comment.replies && comment.replies.length > 0) {
+          const replyMatches = searchInComments(comment.replies, tokens, caseSensitive, depth + 1);
+          matches = matches.concat(replyMatches);
+        }
+      });
+      
+      return matches;
+    }
+
+    // Render search results
+    function renderSearchResults() {
+      const container = document.getElementById('searchResults');
+      
+      if (searchResults.length === 0) {
+        if (lastSearchQuery) {
+          container.innerHTML = `
+            <div class="text-center py-20">
+              <div class="text-8xl mb-6 opacity-50">🔍</div>
+              <p class="text-xl text-gray-400">Nenhum resultado para:</p>
+              <p class="text-lg text-gray-300 mt-2">"${lastSearchQuery}"</p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="text-center py-20">
+              <div class="text-8xl mb-6 opacity-50">🔍</div>
+              <p class="text-xl text-gray-400">Digite uma query de busca acima</p>
+              <p class="text-sm text-gray-500 mt-2">Use operadores booleanos para buscas complexas</p>
+            </div>
+          `;
+        }
+        return;
+      }
+      
+      const showUsernames = document.getElementById('showUsernames').checked;
+      
+      container.innerHTML = searchResults.map((result, index) => {
+        const post = result.post;
+        const highlightedTitle = highlightSearchTerms(post.title, lastSearchQuery);
+        const highlightedContent = highlightSearchTerms(post.content, lastSearchQuery);
+        
+        return `
+          <div class="search-result-card rounded-2xl p-6 fade-in">
+            <div class="flex justify-between items-start mb-4">
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-3">
+                  <span class="text-3xl font-bold neon-gradient bg-clip-text text-transparent">${index + 1}</span>
+                  <span>${highlightedTitle}</span>
+                </h3>
+                <div class="flex flex-wrap gap-3 text-sm mb-3">
+                  <span class="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full">r/${post.subreddit}</span>
+                  ${showUsernames ? `<span class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full">u/${post.author}</span>` : ''}
+                  <span class="px-3 py-1 bg-green-500/20 text-green-300 rounded-full">${new Date(post.created * 1000).toLocaleDateString('pt-BR')}</span>
+                  <span class="px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full">📍 ${result.matchedIn.join(', ')}</span>
+                </div>
+              </div>
+              <a href="${post.url}" target="_blank" class="text-gray-400 hover:text-white transition-all p-2 hover:bg-white/10 rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+              </a>
+            </div>
+            
+            ${post.content ? `
+              <div class="text-gray-300 mb-4 p-4 bg-black/30 rounded-xl">
+                <div class="whitespace-pre-wrap">${highlightedContent}</div>
+              </div>
+            ` : ''}
+            
+            ${result.matchedComments.length > 0 ? `
+              <div class="mt-4 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-xl">
+                <h4 class="text-white font-semibold mb-3">💬 Comentários com correspondências (${result.matchedComments.length}):</h4>
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                  ${result.matchedComments.slice(0, 5).map(match => `
+                    <div class="p-3 bg-black/30 rounded-lg">
+                      <div class="text-sm text-gray-400 mb-2">
+                        ${showUsernames ? `u/${match.comment.author}` : 'Usuário'} • Score: ${match.comment.score}
+                      </div>
+                      <div class="text-gray-200">${highlightSearchTerms(match.comment.body, lastSearchQuery)}</div>
+                    </div>
+                  `).join('')}
+                  ${result.matchedComments.length > 5 ? `
+                    <div class="text-center text-gray-500 text-sm">
+                      +${result.matchedComments.length - 5} comentários adicionais com correspondências
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Highlight search terms in text
+    function highlightSearchTerms(text, query) {
+      if (!text || !query) return text;
+      
+      // Extract terms from query (simple approach)
+      const terms = query
+        .replace(/AND|OR|NOT|\(|\)/gi, ' ')
+        .split(/\s+/)
+        .filter(t => t && t.length > 1)
+        .map(t => t.replace(/^"|"$/g, ''));
+      
+      let highlighted = text;
+      terms.forEach(term => {
+        if (term.includes('*')) {
+          const regex = new RegExp(`(${term.replace(/\*/g, '\\S*')})`, 'gi');
+          highlighted = highlighted.replace(regex, '<span class="search-highlight">$1</span>');
+        } else {
+          const regex = new RegExp(`(${term})`, 'gi');
+          highlighted = highlighted.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+      });
+      
+      return highlighted;
+    }
+
+    // Clear search
+    function clearSearch() {
+      document.getElementById('searchQuery').value = '';
+      searchResults = [];
+      lastSearchQuery = '';
+      document.getElementById('searchStats').classList.add('hidden');
+      document.getElementById('searchResultsCount').classList.add('hidden');
+      document.getElementById('exportSearchBtn').classList.add('hidden');
+      renderSearchResults();
+      showNotification('🗑️ Busca limpa', 'info');
+    }
+
+    // Add search example
+    function addSearchExample() {
+      const examples = [
+        '("XEN45" OR "XEN 45" OR "Xen gel stent") AND ("ab interno" OR "ab externo") AND glaucoma',
+        '"machine learning" AND (python OR javascript OR java) NOT tutorial',
+        'reddit AND ("karma farming" OR spam OR bot) NOT moderator',
+        '(COVID OR coronavirus) AND vaccine AND (moderna OR pfizer)',
+        'crypto* AND (bitcoin OR ethereum) NOT "pump and dump"'
+      ];
+      
+      const randomExample = examples[Math.floor(Math.random() * examples.length)];
+      document.getElementById('searchQuery').value = randomExample;
+      showNotification('📝 Exemplo de busca adicionado!', 'success');
+    }
+
+    // Export search results
+    function exportSearchResults() {
+      if (searchResults.length === 0) {
+        showNotification('⚠️ Nenhum resultado para exportar', 'warning');
+        return;
+      }
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      const showUsernames = document.getElementById('showUsernames').checked;
+      
+      let content = `Reddit Search Results - ${timestamp}\n`;
+      content += `Query: ${lastSearchQuery}\n`;
+      content += `Results: ${searchResults.length} posts\n`;
+      content += `${'='.repeat(80)}\n\n`;
+      
+      searchResults.forEach((result, index) => {
+        const post = result.post;
+        content += `${index + 1}. ${post.title}\n`;
+        content += `   Subreddit: r/${post.subreddit}\n`;
+        if (showUsernames) content += `   Author: u/${post.author}\n`;
+        content += `   Date: ${new Date(post.created * 1000).toLocaleString('pt-BR')}\n`;
+        content += `   Matched in: ${result.matchedIn.join(', ')}\n`;
+        content += `   URL: ${post.url}\n`;
+        
+        if (post.content) {
+          content += `   Content:\n   ${post.content.replace(/\n/g, '\n   ')}\n`;
+        }
+        
+        if (result.matchedComments.length > 0) {
+          content += `   Matched Comments (${result.matchedComments.length}):\n`;
+          result.matchedComments.forEach(match => {
+            content += `   - ${showUsernames ? `u/${match.comment.author}` : 'User'}: ${match.comment.body.substring(0, 200)}...\n`;
+          });
+        }
+        
+        content += '\n';
+      });
+      
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reddit_search_${lastSearchQuery.replace(/[^a-z0-9]/gi, '_')}_${timestamp}.txt`;
+      a.click();
+      
+      showNotification(`📥 ${searchResults.length} resultados exportados!`, 'success');
+    }
+
+    // Show search history
+    function showSearchHistory() {
+      const savedHistory = localStorage.getItem('redditSearchHistory');
+      if (savedHistory) {
+        searchHistory = JSON.parse(savedHistory);
+      }
+      
+      if (searchHistory.length === 0) {
+        showNotification('📜 Nenhum histórico de busca ainda', 'info');
+        return;
+      }
+      
+      const historyHtml = searchHistory.slice(-10).reverse().map((item, index) => 
+        `<div class="p-2 hover:bg-white/10 rounded cursor-pointer" onclick="document.getElementById('searchQuery').value = '${item.query.replace(/'/g, "\\'")}'; executeSearch();">
+          <div class="text-white">${item.query}</div>
+          <div class="text-xs text-gray-400">${item.results} resultados • ${new Date(item.timestamp).toLocaleString('pt-BR')}</div>
+        </div>`
+      ).join('');
+      
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50';
+      modal.innerHTML = `
+        <div class="dark-glass rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <h3 class="text-xl font-bold text-white mb-4">📜 Histórico de Buscas Recentes</h3>
+          <div class="space-y-2">
+            ${historyHtml}
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" class="mt-4 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">
+            Fechar
+          </button>
+        </div>
+      `;
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+      };
+      document.body.appendChild(modal);
+    }
+
+    // ==================== END SEARCH FUNCTIONS ====================
+
+    // Show notification
+    function showNotification(message, type = 'info') {
+      const colors = {
+        success: 'neon-gradient',
+        error: 'bg-gradient-to-r from-red-500 to-red-600',
+        info: 'bg-gradient-to-r from-blue-500 to-blue-600',
+        warning: 'bg-gradient-to-r from-yellow-500 to-yellow-600'
+      };
+      
+      const notification = document.createElement('div');
+      notification.className = `notification ${colors[type]} text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 font-semibold`;
+      notification.innerHTML = `
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white text-xl">✕</button>
+      `;
+      
+      document.getElementById('notificationContainer').appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    }
+
+    // Loading state
+    function setLoading(loading, status = '', progress = 0) {
+      isLoading = loading;
+      const overlay = document.getElementById('loadingOverlay');
+      if (loading) {
+        overlay.classList.remove('hidden');
+        if (status) document.getElementById('loadingStatus').textContent = status;
+        document.getElementById('progressBar').style.width = `${progress}%`;
+        document.getElementById('progressText').textContent = `${progress}%`;
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    // Toggle comments
+    function toggleComments(id) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.classList.toggle('hidden');
+      }
+    }
+    
+    // Reload comments
+    async function reloadComments(postUrl, postId) {
+      showNotification('🔄 Recarregando comentários...', 'info');
+      
+      try {
+        const fullPost = await fetchRedditPost(postUrl);
+        if (fullPost && fullPost.comments) {
+          const postIndex = posts.findIndex(p => p.id === postId);
+          if (postIndex !== -1) {
+            posts[postIndex].comments = fullPost.comments;
+            saveToLocalStorage();
+            renderPosts();
+            
+            const commentsCount = countComments(fullPost.comments);
+            showNotification(`✅ ${commentsCount} comentários recarregados!`, 'success');
+            updateStats();
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao recarregar comentários:', error);
+        showNotification('❌ Erro ao recarregar comentários', 'error');
+      }
+    }
+
+    // Add example URLs
+    function addExampleUrls() {
+      const examples = [
+        'https://www.reddit.com/r/programming/hot',
+        'https://www.reddit.com/r/technology/top',
+        'https://www.reddit.com/r/AskReddit/top'
+      ];
+      document.getElementById('urlInput').value = examples.join('\n');
+      showNotification('✅ URLs de exemplo adicionadas!', 'success');
+    }
+
+    // Clear URLs
+    function clearUrls() {
+      document.getElementById('urlInput').value = '';
+      showNotification('🗑️ URLs limpas', 'info');
+    }
+
+    // Clear all data
+    function clearAllData() {
+      if (confirm('⚠️ Tem certeza que deseja limpar TODOS os dados?')) {
+        posts = [];
+        extractedLinks = [];
+        extractedImages = [];
+        localStorage.removeItem('redditScraperPosts');
+        localStorage.removeItem('redditScraperLinks');
+        localStorage.removeItem('redditScraperImages');
+        updateStats();
+        switchTab('posts');
+        showNotification('✅ Dados limpos!', 'success');
+      }
+    }
+
+    // Date filtering
+    function filterByDate(items) {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      
+      if (!startDate && !endDate) return items;
+      
+      const start = startDate ? new Date(startDate).getTime() / 1000 : 0;
+      const end = endDate ? new Date(endDate + ' 23:59:59').getTime() / 1000 : Infinity;
+      
+      return items.filter(item => {
+        const created = item.created || item.created_utc || 0;
+        return created >= start && created <= end;
+      });
+    }
+
+    // Extract all links
+    function extractAllLinks() {
+      extractedLinks = [];
+      const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+      
+      posts.forEach(post => {
+        const postLinks = (post.content.match(urlRegex) || []);
+        const commentLinks = extractLinksFromComments(post.comments);
+        const allLinks = [...new Set([...postLinks, ...commentLinks])];
+        
+        allLinks.forEach(link => {
+          if (!extractedLinks.find(l => l.url === link)) {
+            extractedLinks.push({
+              url: link,
+              source: post.title,
+              subreddit: post.subreddit,
+              postUrl: post.url,
+              created: post.created
+            });
+          }
+        });
+      });
+      
+      updateStats();
+      showNotification(`✅ ${extractedLinks.length} links extraídos!`, 'success');
+      
+      if (currentTab === 'links') renderLinks();
+      if (currentTab === 'gallery') renderGallery();
+    }
+
+    // Extract all images
+    function extractAllImages() {
+      extractedImages = [];
+      const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i;
+      const imageHosts = ['i.imgur.com', 'i.redd.it', 'preview.redd.it', 'imgur.com'];
+      
+      posts.forEach(post => {
+        if (post.preview?.images) {
+          post.preview.images.forEach(img => {
+            if (img.source?.url) {
+              const url = img.source.url.replace(/&amp;/g, '&');
+              extractedImages.push({
+                url: url,
+                thumbnail: img.resolutions?.[0]?.url?.replace(/&amp;/g, '&') || url,
+                source: post.title,
+                subreddit: post.subreddit,
+                postUrl: post.url,
+                type: 'post'
+              });
+            }
+          });
+        }
+        
+        if (post.thumbnail && post.thumbnail !== 'self' && post.thumbnail !== 'default' && post.thumbnail.startsWith('http')) {
+          if (!extractedImages.find(img => img.url === post.thumbnail)) {
+            extractedImages.push({
+              url: post.thumbnail,
+              thumbnail: post.thumbnail,
+              source: post.title,
+              subreddit: post.subreddit,
+              postUrl: post.url,
+              type: 'post'
+            });
+          }
+        }
+        
+        const commentImageUrls = extractImagesFromComments(post.comments);
+        commentImageUrls.forEach(imgUrl => {
+          if (!extractedImages.find(img => img.url === imgUrl)) {
+            extractedImages.push({
+              url: imgUrl,
+              thumbnail: imgUrl,
+              source: `Comentário em: ${post.title}`,
+              subreddit: post.subreddit,
+              postUrl: post.url,
+              type: 'comment'
+            });
+          }
+        });
+      });
+      
+      extractedLinks.forEach(link => {
+        try {
+          const url = new URL(link.url);
+          if (imageExtensions.test(url.pathname) || imageHosts.includes(url.hostname)) {
+            if (!extractedImages.find(img => img.url === link.url)) {
+              extractedImages.push({
+                url: link.url,
+                thumbnail: link.url,
+                source: link.source,
+                subreddit: link.subreddit,
+                postUrl: link.postUrl,
+                type: 'link'
+              });
+            }
+          }
+        } catch (e) {}
+      });
+      
+      updateStats();
+      showNotification(`✅ ${extractedImages.length} imagens encontradas!`, 'success');
+      
+      if (currentTab === 'images') renderImages();
+      if (currentTab === 'gallery') renderGallery();
+    }
+    
+    // Extract images from comments
+    function extractImagesFromComments(comments) {
+      const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp)/i;
+      const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+      let imageUrls = [];
+      
+      if (!comments || comments.length === 0) return imageUrls;
+      
+      comments.forEach(comment => {
+        if (comment.body) {
+          const urls = comment.body.match(urlRegex) || [];
+          urls.forEach(url => {
+            if (imageExtensions.test(url)) {
+              imageUrls.push(url);
+            }
+          });
+        }
+        
+        if (comment.replies && comment.replies.length > 0) {
+          imageUrls.push(...extractImagesFromComments(comment.replies));
+        }
+      });
+      
+      return [...new Set(imageUrls)];
+    }
+
+    // Extract links from comments
+    function extractLinksFromComments(comments, depth = 0) {
+      const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+      let links = [];
+      
+      if (!comments || comments.length === 0) return links;
+      
+      comments.forEach(comment => {
+        if (comment.body) {
+          const commentLinks = comment.body.match(urlRegex) || [];
+          links.push(...commentLinks);
+        }
+        
+        if (comment.replies && comment.replies.length > 0) {
+          const replyLinks = extractLinksFromComments(comment.replies, depth + 1);
+          links.push(...replyLinks);
+        }
+      });
+      
+      return links;
+    }
+
+    // Copy all links
+    function copyAllLinks() {
+      const links = extractedLinks.map(l => l.url).join('\n');
+      navigator.clipboard.writeText(links).then(() => {
+        showNotification(`📋 ${extractedLinks.length} links copiados!`, 'success');
+      });
+    }
+
+    // Filter links
+    function filterLinks(type) {
+      renderLinks(type);
+    }
+
+    // Render posts
+    function renderPosts() {
+      const container = document.getElementById('content-posts');
+      
+      if (posts.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-20">
+            <div class="text-8xl mb-6 animate-pulse">📭</div>
+            <p class="text-2xl text-gray-300 mb-3">Nenhum post carregado ainda</p>
+            <p class="text-gray-500">Cole URLs do Reddit acima e clique em "Iniciar Scraping Massivo"</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const hideNoComments = document.getElementById('hideNoComments').checked;
+      const showUsernames = document.getElementById('showUsernames').checked;
+      
+      let filteredPosts = posts;
+      if (hideNoComments) {
+        filteredPosts = filteredPosts.filter(p => p.num_comments > 0);
+      }
+      filteredPosts = filterByDate(filteredPosts);
+      
+      const totalRealComments = filteredPosts.reduce((sum, post) => {
+        return sum + countComments(post.comments);
+      }, 0);
+      
+      container.innerHTML = `
+        <div class="mb-6 p-4 dark-glass rounded-xl">
+          <div class="flex justify-between items-center">
+            <h2 class="text-2xl font-bold text-white">📚 Posts Carregados</h2>
+            <div class="flex gap-4">
+              <span class="text-gray-300">Total: ${filteredPosts.length} posts</span>
+              <span class="text-gray-300">Comentários: ${totalRealComments}</span>
+            </div>
+          </div>
+        </div>
+      ` + filteredPosts.map((post, index) => `
+        <div class="post-card rounded-2xl p-6 fade-in mb-6">
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-3">
+                <span class="text-3xl font-bold neon-gradient bg-clip-text text-transparent">${index + 1}</span>
+                ${post.title}
+              </h3>
+              <div class="flex flex-wrap gap-3 text-sm">
+                <span class="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full">r/${post.subreddit}</span>
+                ${showUsernames ? `<span class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full">u/${post.author}</span>` : ''}
+                <span class="px-3 py-1 bg-green-500/20 text-green-300 rounded-full">${new Date(post.created * 1000).toLocaleDateString('pt-BR')}</span>
+                <span class="px-3 py-1 bg-orange-500/20 text-orange-300 rounded-full">⬆️ ${post.score}</span>
+                <span class="px-3 py-1 bg-pink-500/20 text-pink-300 rounded-full">💬 ${post.num_comments} (${countComments(post.comments)} carregados)</span>
+              </div>
+            </div>
+            <a href="${post.url}" target="_blank" class="text-gray-400 hover:text-white transition-all p-2 hover:bg-white/10 rounded-lg">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+              </svg>
+            </a>
+          </div>
+          
+          ${post.content ? `
+            <div class="text-gray-300 mb-4 p-4 bg-black/30 rounded-xl">
+              <h4 class="text-white font-semibold mb-2">📄 Conteúdo:</h4>
+              <div class="whitespace-pre-wrap">${post.content}</div>
+            </div>
+          ` : ''}
+          
+          <div class="mt-6">
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="text-white font-bold text-lg flex items-center gap-2">
+                <span>💬</span> Comentários (${post.comments.length} principais, ${countComments(post.comments)} total)
+              </h4>
+              <div class="flex gap-2">
+                <button onclick="toggleComments('comments-${post.id}')" class="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg transition-all">
+                  Mostrar/Ocultar
+                </button>
+                <button onclick="reloadComments('${post.url}', '${post.id}')" class="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg transition-all flex items-center gap-2">
+                  <span>🔄</span> Recarregar
+                </button>
+              </div>
+            </div>
+            <div id="comments-${post.id}" class="space-y-3 max-h-[800px] overflow-y-auto p-4 bg-black/20 rounded-xl">
+              ${post.comments.length > 0 ? renderComments(post.comments, showUsernames) : `
+                <div class="text-center py-8 text-gray-500">
+                  <p>Sem comentários carregados</p>
+                  <p class="text-sm mt-2">Clique em "Recarregar" para buscar</p>
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Render comments
+    function renderComments(comments, showUsernames, depth = 0) {
+      if (!comments || comments.length === 0) return '<p class="text-gray-500">Sem comentários</p>';
+      
+      return comments.map((comment, index) => {
+        const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+        const commentLinks = comment.body.match(urlRegex) || [];
+        
+        let processedBody = comment.body;
+        commentLinks.forEach(link => {
+          processedBody = processedBody.replace(link, `<a href="${link}" target="_blank" class="text-cyan-400 hover:text-cyan-300 underline">${link}</a>`);
+        });
+        
+        return `
+          <div class="${depth > 0 ? 'comment-thread ml-4' : ''} text-gray-300 mb-3">
+            <div class="p-4 bg-gradient-to-r from-black/30 to-black/20 rounded-xl hover:from-black/40 hover:to-black/30 transition-all border border-gray-700/30">
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-3 flex-wrap">
+                  <span class="text-purple-400 font-bold text-sm">
+                    ${showUsernames ? `u/${comment.author}` : `Usuário ${index + 1}`}
+                  </span>
+                  <span class="text-orange-400 text-xs px-2 py-1 bg-orange-500/10 rounded-full">
+                    ⬆️ ${comment.score} pontos
+                  </span>
+                  ${comment.created ? `
+                    <span class="text-gray-500 text-xs">
+                      ${new Date(comment.created * 1000).toLocaleString('pt-BR')}
+                    </span>
+                  ` : ''}
+                </div>
+                ${commentLinks.length > 0 ? `
+                  <span class="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full">
+                    🔗 ${commentLinks.length} link${commentLinks.length > 1 ? 's' : ''}
+                  </span>
+                ` : ''}
+              </div>
+              
+              <div class="text-gray-200 mb-3 leading-relaxed whitespace-pre-wrap">${processedBody}</div>
+              
+              ${commentLinks.length > 0 ? `
+                <div class="mt-3 p-3 bg-blue-500/10 rounded-lg">
+                  <p class="text-xs text-blue-300 mb-2 font-semibold">Links:</p>
+                  <div class="space-y-1">
+                    ${commentLinks.map(link => `
+                      <div class="flex items-center gap-2">
+                        <span class="text-blue-400">→</span>
+                        <a href="${link}" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-xs truncate max-w-full">
+                          ${link}
+                        </a>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${comment.replies && comment.replies.length > 0 ? `
+                <details class="mt-4" open>
+                  <summary class="cursor-pointer text-sm text-gray-400 hover:text-white transition-colors font-semibold">
+                    ↳ ${comment.replies.length} resposta${comment.replies.length > 1 ? 's' : ''}
+                  </summary>
+                  <div class="mt-3">
+                    ${renderComments(comment.replies, showUsernames, depth + 1)}
+                  </div>
+                </details>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render links
+    function renderLinks(filter = 'all') {
+      const container = document.getElementById('linksList');
+      
+      if (extractedLinks.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-20">
+            <div class="text-8xl mb-6 opacity-50">🔗</div>
+            <p class="text-xl text-gray-400">Nenhum link extraído</p>
+          </div>
+        `;
+        return;
+      }
+      
+      let links = extractedLinks;
+      if (filter === 'external') {
+        links = links.filter(l => !l.url.includes('reddit.com'));
+      }
+      
+      container.innerHTML = links.map((link, index) => `
+        <div class="link-card rounded-xl p-4 flex justify-between items-center fade-in">
+          <div class="flex-1">
+            <a href="${link.url}" target="_blank" class="text-cyan-400 hover:text-cyan-300 transition-all break-all text-lg">
+              ${link.url}
+            </a>
+            <div class="text-sm text-gray-500 mt-2 flex items-center gap-3">
+              <span>📝 ${link.source.substring(0, 50)}...</span>
+              <span>•</span>
+              <span>r/${link.subreddit}</span>
+            </div>
+          </div>
+          <button onclick="navigator.clipboard.writeText('${link.url}').then(() => showNotification('✅ Link copiado!', 'success'))" class="text-gray-400 hover:text-white ml-4 p-2 hover:bg-white/10 rounded-lg transition-all">
+            📋
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Render images
+    function renderImages() {
+      const container = document.getElementById('imagesGrid');
+      
+      if (extractedImages.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-20 col-span-full">
+            <div class="text-8xl mb-6 opacity-50">🖼️</div>
+            <p class="text-xl text-gray-400">Nenhuma imagem encontrada</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = extractedImages.map((img, index) => `
+        <div class="image-card rounded-xl cursor-pointer relative group" onclick="openImageModal('${img.url}')">
+          <img src="${img.thumbnail}" alt="${img.source}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23666%22%3E%3Cpath d=%22M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z%22/%3E%3C/svg%3E'">
+          <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span class="px-2 py-1 text-xs rounded-full ${
+              img.type === 'post' ? 'bg-purple-500/80' : 
+              img.type === 'comment' ? 'bg-blue-500/80' : 'bg-green-500/80'
+            } text-white">
+              ${img.type === 'post' ? '📝 Post' : 
+                img.type === 'comment' ? '💬 Comentário' : '🔗 Link'}
+            </span>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
+            <p class="text-white text-xs truncate">${img.source}</p>
+            <p class="text-gray-300 text-xs">r/${img.subreddit}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Open image modal
+    function openImageModal(url) {
+      document.getElementById('modalImage').src = url;
+      document.getElementById('imageModal').classList.remove('hidden');
+    }
+
+    // Close image modal
+    function closeImageModal() {
+      document.getElementById('imageModal').classList.add('hidden');
+    }
+
+    // Render gallery
+    function renderGallery() {
+      const container = document.getElementById('galleryGrid');
+      
+      if (extractedLinks.length === 0 && extractedImages.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-20 col-span-full">
+            <div class="text-8xl mb-6 opacity-50">🎨</div>
+            <p class="text-xl text-gray-400">Nenhuma mídia disponível</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const mediaByDomain = {};
+      
+      extractedLinks.forEach(link => {
+        const domain = new URL(link.url).hostname;
+        if (!mediaByDomain[domain]) mediaByDomain[domain] = { links: [], images: [] };
+        mediaByDomain[domain].links.push(link);
+      });
+      
+      extractedImages.forEach(img => {
+        const domain = new URL(img.url).hostname;
+        if (!mediaByDomain[domain]) mediaByDomain[domain] = { links: [], images: [] };
+        mediaByDomain[domain].images.push(img);
+      });
+      
+      container.innerHTML = `
+        <div class="col-span-full">
+          <h3 class="text-xl font-bold mb-4 text-white">📸 Galeria de Imagens</h3>
+          <div class="media-grid mb-8">
+            ${extractedImages.slice(0, 12).map(img => `
+              <div class="image-card rounded-xl cursor-pointer" onclick="openImageModal('${img.url}')">
+                <img src="${img.thumbnail}" alt="${img.source}" loading="lazy">
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        
+        <div class="col-span-full">
+          <h3 class="text-xl font-bold mb-4 text-white">🔗 Links por Domínio</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${Object.entries(mediaByDomain).map(([domain, media]) => `
+              <div class="dark-glass rounded-xl p-4">
+                <div class="text-white font-bold mb-3 text-lg">${domain}</div>
+                <div class="text-sm text-gray-400 mb-2">${media.links.length} links • ${media.images.length} imagens</div>
+                <div class="space-y-1">
+                  ${media.links.slice(0, 3).map(link => `
+                    <a href="${link.url}" target="_blank" class="block text-cyan-400 hover:text-cyan-300 text-xs truncate">
+                      ${link.url}
+                    </a>
+                  `).join('')}
+                  ${media.links.length > 3 ? `<div class="text-gray-500 text-xs">+${media.links.length - 3} mais...</div>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render analytics
+    function renderAnalytics() {
+      if (posts.length === 0) return;
+      
+      const totalComments = posts.reduce((sum, p) => sum + countComments(p.comments), 0);
+      const avgComments = Math.round(totalComments / posts.length);
+      
+      const subredditCounts = {};
+      posts.forEach(p => {
+        subredditCounts[p.subreddit] = (subredditCounts[p.subreddit] || 0) + 1;
+      });
+      const topSubreddit = Object.entries(subredditCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
+      
+      const dates = posts.map(p => new Date(p.created * 1000)).sort((a, b) => a - b);
+      const dateRange = dates.length > 0 ? 
+        `${dates[0].toLocaleDateString('pt-BR')} - ${dates[dates.length - 1].toLocaleDateString('pt-BR')}` : '-';
+      
+      document.getElementById('avgComments').textContent = avgComments;
+      document.getElementById('topSubreddit').textContent = `r/${topSubreddit}`;
+      document.getElementById('dateRange').textContent = dateRange;
+      
+      const chartContainer = document.getElementById('chartsContainer');
+      const maxCount = Math.max(...Object.values(subredditCounts));
+      
+      chartContainer.innerHTML = `
+        <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-2">
+          <span>📊</span> Posts por Subreddit
+        </h3>
+        <div class="space-y-4">
+          ${Object.entries(subredditCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([sub, count]) => `
+              <div class="flex items-center gap-4">
+                <div class="text-gray-300 w-40">r/${sub}</div>
+                <div class="flex-1 bg-gray-700 rounded-full overflow-hidden h-8">
+                  <div class="h-full chart-bar flex items-center justify-end pr-3" style="width: ${(count / maxCount) * 100}%">
+                    <span class="text-white text-sm font-bold">${count}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+        </div>
+      `;
+    }
+
+    // Render timeline
+    function renderTimeline() {
+      const container = document.getElementById('timelineContainer');
+      
+      if (posts.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-20">
+            <div class="text-8xl mb-6 opacity-50">📅</div>
+            <p class="text-xl text-gray-400">Nenhuma atividade registrada</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const postsByDate = {};
+      posts.forEach(post => {
+        const date = new Date(post.created * 1000).toLocaleDateString('pt-BR');
+        if (!postsByDate[date]) postsByDate[date] = [];
+        postsByDate[date].push(post);
+      });
+      
+      const sortedDates = Object.keys(postsByDate).sort((a, b) => {
+        const dateA = new Date(a.split('/').reverse().join('-'));
+        const dateB = new Date(b.split('/').reverse().join('-'));
+        return dateB - dateA;
+      });
+      
+      container.innerHTML = sortedDates.map(date => `
+        <div class="dark-glass rounded-xl p-6 fade-in">
+          <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3">
+            <span class="text-2xl">📅</span>
+            ${date}
+            <span class="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm">
+              ${postsByDate[date].length} posts
+            </span>
+          </h3>
+          <div class="space-y-3">
+            ${postsByDate[date].slice(0, 5).map(post => `
+              <div class="p-3 bg-black/30 rounded-lg hover:bg-black/40 transition-all">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <h4 class="text-white font-semibold mb-1">${post.title}</h4>
+                    <div class="flex gap-3 text-sm text-gray-400">
+                      <span>r/${post.subreddit}</span>
+                      <span>⬆️ ${post.score}</span>
+                      <span>💬 ${post.num_comments}</span>
+                    </div>
+                  </div>
+                  <a href="${post.url}" target="_blank" class="text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            `).join('')}
+            ${postsByDate[date].length > 5 ? `
+              <div class="text-center text-gray-500 text-sm">
+                +${postsByDate[date].length - 5} posts adicionais
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Download all images
+    function downloadAllImages() {
+      if (extractedImages.length === 0) {
+        showNotification('⚠️ Nenhuma imagem para baixar', 'warning');
+        return;
+      }
+      
+      const content = extractedImages.map(img => img.url).join('\n');
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reddit_images_${new Date().toISOString().split('T')[0]}.txt`;
+      a.click();
+      
+      showNotification(`📥 Lista de ${extractedImages.length} URLs de imagens baixada!`, 'success');
+    }
+
+    // Download posts
+    function downloadPosts(format) {
+      if (posts.length === 0) {
+        showNotification('⚠️ Nenhum post para baixar', 'warning');
+        return;
+      }
+      
+      const showUsernames = document.getElementById('showUsernames').checked;
+      const timestamp = new Date().toISOString().split('T')[0];
+      
+      if (format === 'txt') {
+        downloadTXT(showUsernames, timestamp);
+      } else if (format === 'html') {
+        downloadHTML(showUsernames, timestamp);
+      } else if (format === 'xlsx') {
+        downloadXLSX(showUsernames, timestamp);
+      } else if (format === 'json') {
+        downloadJSON(timestamp);
+      }
+    }
+
+    // Download as JSON
+    function downloadJSON(timestamp) {
+      const data = {
+        metadata: {
+          exportDate: new Date().toISOString(),
+          totalPosts: posts.length,
+          totalLinks: extractedLinks.length,
+          totalImages: extractedImages.length,
+          scrapingSession: scrapingSession
+        },
+        posts: posts,
+        links: extractedLinks,
+        images: extractedImages
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reddit_data_${timestamp}.json`;
+      a.click();
+      
+      showNotification('📦 Download JSON iniciado!', 'success');
+    }
+
+    // Download as TXT
+    function downloadTXT(showUsernames, timestamp) {
+      let content = `Reddit Posts Export - ${timestamp}\n${'='.repeat(80)}\n\n`;
+      content += `Total de Posts: ${posts.length}\n`;
+      content += `Total de Links: ${extractedLinks.length}\n`;
+      content += `Total de Imagens: ${extractedImages.length}\n\n`;
+      
+      posts.forEach((post, index) => {
+        content += `${'='.repeat(80)}\n`;
+        content += `POST ${index + 1}\n`;
+        content += `${'='.repeat(80)}\n`;
+        content += `Título: ${post.title}\n`;
+        content += `Subreddit: r/${post.subreddit}\n`;
+        if (showUsernames) content += `Autor: u/${post.author}\n`;
+        content += `Data: ${new Date(post.created * 1000).toLocaleString('pt-BR')}\n`;
+        content += `Score: ${post.score}\n`;
+        content += `Comentários: ${post.num_comments}\n`;
+        content += `URL: ${post.url}\n`;
+        content += `\nConteúdo:\n${'-'.repeat(40)}\n${post.content}\n`;
+        
+        if (post.comments.length > 0) {
+          content += `\nCOMENTÁRIOS (${post.comments.length}):\n${'-'.repeat(40)}\n`;
+          content += formatCommentsText(post.comments, showUsernames);
+        }
+        
+        content += '\n\n';
+      });
+      
+      if (extractedLinks.length > 0) {
+        content += `\n${'='.repeat(80)}\n`;
+        content += `LINKS EXTRAÍDOS (${extractedLinks.length})\n`;
+        content += `${'='.repeat(80)}\n\n`;
+        extractedLinks.forEach((link, i) => {
+          content += `${i + 1}. ${link.url}\n`;
+          content += `   Fonte: ${link.source}\n`;
+          content += `   Subreddit: r/${link.subreddit}\n\n`;
+        });
+      }
+      
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reddit_posts_${timestamp}.txt`;
+      a.click();
+      
+      showNotification('📄 Download TXT iniciado!', 'success');
+    }
+
+    // Format comments for text
+    function formatCommentsText(comments, showUsernames, depth = 0) {
+      let text = '';
+      const indent = '  '.repeat(depth);
+      
+      if (!comments || comments.length === 0) {
+        return indent + '(Sem comentários)\n';
+      }
+      
+      comments.forEach((comment, index) => {
+        text += `${indent}[Comentário ${index + 1}]\n`;
+        text += `${indent}• ${showUsernames ? `u/${comment.author}` : 'Usuário'} (Score: ${comment.score})\n`;
+        text += `${indent}  ${comment.body.replace(/\n/g, `\n${indent}  `)}\n`;
+        
+        const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+        const links = comment.body.match(urlRegex) || [];
+        if (links.length > 0) {
+          text += `${indent}  Links: ${links.join(', ')}\n`;
+        }
+        
+        text += '\n';
+        
+        if (comment.replies && comment.replies.length > 0) {
+          text += `${indent}  ↳ Respostas (${comment.replies.length}):\n`;
+          text += formatCommentsText(comment.replies, showUsernames, depth + 1);
+        }
+      });
+      
+      return text;
+    }
+
+    // Download as HTML
+    function downloadHTML(showUsernames, timestamp) {
+      let html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Reddit Posts - ${timestamp}</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 40px 20px; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    h1 {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 48px;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .post { 
+      background: white; 
+      border-radius: 15px; 
+      padding: 30px; 
+      margin-bottom: 30px; 
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      border-left: 5px solid #667eea;
+    }
+    .post-header { 
+      border-bottom: 2px solid #f0f0f0; 
+      padding-bottom: 15px; 
+      margin-bottom: 20px; 
+    }
+    .post-title { 
+      font-size: 28px; 
+      font-weight: bold; 
+      color: #333; 
+      margin-bottom: 15px; 
+    }
+    .post-meta { 
+      color: #666; 
+      font-size: 14px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .meta-item {
+      background: #f5f5f5;
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+    .post-content { 
+      margin: 25px 0; 
+      line-height: 1.8;
+      color: #444;
+      white-space: pre-wrap;
+    }
+    .comments { 
+      margin-top: 30px; 
+      padding-top: 30px; 
+      border-top: 3px solid #f0f0f0; 
+    }
+    .comment { 
+      margin-left: 25px; 
+      padding: 15px; 
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+      border-left: 3px solid #667eea; 
+      margin-bottom: 15px;
+      border-radius: 10px;
+    }
+    .comment-meta { 
+      font-size: 13px; 
+      color: #666; 
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    a { 
+      color: #667eea; 
+      text-decoration: none;
+      font-weight: 500;
+    }
+    a:hover { 
+      text-decoration: underline; 
+    }
+    .stats {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 15px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 36px;
+      font-weight: bold;
+    }
+    .stat-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Reddit Posts Export</h1>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-number">${posts.length}</div>
+        <div class="stat-label">Posts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${extractedLinks.length}</div>
+        <div class="stat-label">Links</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${extractedImages.length}</div>
+        <div class="stat-label">Imagens</div>
+      </div>
+    </div>`;
+      
+      posts.forEach((post, index) => {
+        html += `
+    <div class="post">
+      <div class="post-header">
+        <div class="post-title">${index + 1}. ${post.title}</div>
+        <div class="post-meta">
+          <span class="meta-item">r/${post.subreddit}</span>
+          ${showUsernames ? `<span class="meta-item">u/${post.author}</span>` : ''}
+          <span class="meta-item">${new Date(post.created * 1000).toLocaleString('pt-BR')}</span>
+          <span class="meta-item">⬆️ ${post.score}</span>
+          <span class="meta-item">💬 ${post.num_comments}</span>
+        </div>
+        <div style="margin-top: 10px;">
+          <a href="${post.url}" target="_blank">${post.url}</a>
+        </div>
+      </div>
+      <div class="post-content">${post.content}</div>`;
+        
+        if (post.comments.length > 0) {
+          html += `<div class="comments"><h3>💬 Comentários (${post.comments.length})</h3>`;
+          html += formatCommentsHTML(post.comments, showUsernames);
+          html += '</div>';
+        }
+        
+        html += '</div>';
+      });
+      
+      html += '</div></body></html>';
+      
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reddit_posts_${timestamp}.html`;
+      a.click();
+      
+      showNotification('🌐 Download HTML iniciado!', 'success');
+    }
+
+    // Format comments for HTML
+    function formatCommentsHTML(comments, showUsernames, depth = 0) {
+      let html = '';
+      
+      if (!comments || comments.length === 0) {
+        return '<p style="color: #999;">Sem comentários</p>';
+      }
+      
+      comments.forEach((comment, index) => {
+        const marginLeft = depth * 30;
+        
+        const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+        let bodyWithLinks = comment.body.replace(/\n/g, '<br>');
+        const links = comment.body.match(urlRegex) || [];
+        links.forEach(link => {
+          bodyWithLinks = bodyWithLinks.replace(link, `<a href="${link}" target="_blank" style="color: #4a9eff;">${link}</a>`);
+        });
+        
+        html += `<div class="comment" style="margin-left: ${marginLeft}px;">
+          <div class="comment-meta">
+            ${showUsernames ? `u/${comment.author}` : `Usuário ${index + 1}`} • Score: ${comment.score}
+            ${comment.created ? ` • ${new Date(comment.created * 1000).toLocaleString('pt-BR')}` : ''}
+          </div>
+          <div style="margin-top: 8px; line-height: 1.5;">${bodyWithLinks}</div>`;
+        
+        if (links.length > 0) {
+          html += `<div style="margin-top: 10px; padding: 10px; background: rgba(74, 158, 255, 0.1); border-radius: 5px;">
+            <strong>Links:</strong><br>`;
+          links.forEach(link => {
+            html += `• <a href="${link}" target="_blank" style="color: #4a9eff; font-size: 12px;">${link}</a><br>`;
+          });
+          html += '</div>';
+        }
+        
+        if (comment.replies && comment.replies.length > 0) {
+          html += `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+            <strong>↳ ${comment.replies.length} resposta(s):</strong>`;
+          html += formatCommentsHTML(comment.replies, showUsernames, depth + 1);
+          html += '</div>';
+        }
+        
+        html += '</div>';
+      });
+      
+      return html;
+    }
+
+    // Download as XLSX
+    function downloadXLSX(showUsernames, timestamp) {
+      const wb = XLSX.utils.book_new();
+      
+      // Posts sheet
+      const postsData = posts.map((post, index) => ({
+        'ID': index + 1,
+        'Título': post.title,
+        'Subreddit': `r/${post.subreddit}`,
+        'Autor': showUsernames ? `u/${post.author}` : 'Oculto',
+        'Data': new Date(post.created * 1000).toLocaleString('pt-BR'),
+        'Score': post.score,
+        'Comentários': post.num_comments,
+        'Comentários Carregados': countComments(post.comments),
+        'URL': post.url,
+        'Conteúdo': post.content
+      }));
+      
+      const postsWs = XLSX.utils.json_to_sheet(postsData);
+      XLSX.utils.book_append_sheet(wb, postsWs, 'Posts');
+      
+      // Comments sheet
+      const commentsData = [];
+      posts.forEach((post, postIndex) => {
+        flattenComments(post.comments, postIndex + 1, post.title).forEach(c => {
+          commentsData.push({
+            'Post ID': c.postId,
+            'Post Título': c.postTitle,
+            'Autor': showUsernames ? `u/${c.author}` : 'Oculto',
+            'Score': c.score,
+            'Nível': c.depth,
+            'Comentário': c.body
+          });
+        });
+      });
+      
+      if (commentsData.length > 0) {
+        const commentsWs = XLSX.utils.json_to_sheet(commentsData);
+        XLSX.utils.book_append_sheet(wb, commentsWs, 'Comentários');
+      }
+      
+      // Links sheet
+      if (extractedLinks.length > 0) {
+        const linksData = extractedLinks.map(link => ({
+          'URL': link.url,
+          'Fonte': link.source,
+          'Subreddit': `r/${link.subreddit}`,
+          'Post URL': link.postUrl
+        }));
+        
+        const linksWs = XLSX.utils.json_to_sheet(linksData);
+        XLSX.utils.book_append_sheet(wb, linksWs, 'Links');
+      }
+      
+      // Images sheet
+      if (extractedImages.length > 0) {
+        const imagesData = extractedImages.map(img => ({
+          'URL': img.url,
+          'Thumbnail': img.thumbnail,
+          'Fonte': img.source,
+          'Subreddit': `r/${img.subreddit}`,
+          'Post URL': img.postUrl,
+          'Tipo': img.type
+        }));
+        
+        const imagesWs = XLSX.utils.json_to_sheet(imagesData);
+        XLSX.utils.book_append_sheet(wb, imagesWs, 'Imagens');
+      }
+      
+      XLSX.writeFile(wb, `reddit_posts_${timestamp}.xlsx`);
+      showNotification('📊 Download XLSX iniciado!', 'success');
+    }
+
+    // Flatten comments for Excel
+    function flattenComments(comments, postId, postTitle, depth = 0) {
+      let flat = [];
+      
+      comments.forEach(comment => {
+        flat.push({
+          postId,
+          postTitle,
+          author: comment.author,
+          score: comment.score,
+          depth,
+          body: comment.body
+        });
+        
+        if (comment.replies && comment.replies.length > 0) {
+          flat.push(...flattenComments(comment.replies, postId, postTitle, depth + 1));
+        }
+      });
+      
+      return flat;
+    }
+
+    // Update statistics
+    function updateStats() {
+      document.getElementById('totalPosts').textContent = posts.length;
+      document.getElementById('totalLinks').textContent = extractedLinks.length;
+      document.getElementById('totalImages').textContent = extractedImages.length;
+      
+      const totalComments = posts.reduce((sum, p) => {
+        return sum + countComments(p.comments);
+      }, 0);
+      document.getElementById('totalComments').textContent = totalComments;
+      
+      if (posts.length > 0) {
+        console.log('📊 Estatísticas Atualizadas:');
+        console.log(`- Posts: ${posts.length}`);
+        console.log(`- Comentários totais: ${totalComments}`);
+        console.log(`- Links extraídos: ${extractedLinks.length}`);
+        console.log(`- Imagens encontradas: ${extractedImages.length}`);
+      }
+    }
+
+    // Count comments recursively
+    function countComments(comments) {
+      let count = comments.length;
+      comments.forEach(c => {
+        if (c.replies && c.replies.length > 0) {
+          count += countComments(c.replies);
+        }
+      });
+      return count;
+    }
+
+    // Local storage
+    function saveToLocalStorage() {
+      if (!document.getElementById('autoSave').checked) return;
+      
+      try {
+        localStorage.setItem('redditScraperPosts', JSON.stringify(posts));
+        localStorage.setItem('redditScraperLinks', JSON.stringify(extractedLinks));
+        localStorage.setItem('redditScraperImages', JSON.stringify(extractedImages));
+      } catch (e) {
+        console.error('Error saving to localStorage:', e);
+      }
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const savedPosts = localStorage.getItem('redditScraperPosts');
+        const savedLinks = localStorage.getItem('redditScraperLinks');
+        const savedImages = localStorage.getItem('redditScraperImages');
+        
+        if (savedPosts) posts = JSON.parse(savedPosts);
+        if (savedLinks) extractedLinks = JSON.parse(savedLinks);
+        if (savedImages) extractedImages = JSON.parse(savedImages);
+        
+        if (posts.length > 0) {
+          updateStats();
+          renderPosts();
+        }
+      } catch (e) {
+        console.error('Error loading from localStorage:', e);
+      }
+    }
+  </script>
+</body>
+</html>
