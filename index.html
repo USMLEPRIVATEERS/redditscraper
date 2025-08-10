@@ -1046,9 +1046,9 @@ https://thingproxy.freeboard.io/fetch/</textarea>
     function setDefaultDates() {
       const today = new Date();
       const startDate = new Date(today);
-      startDate.setDate(today.getDate() - 30);
+      startDate.setDate(today.getDate() - 10);
       const endDate = new Date(today);
-      endDate.setDate(today.getDate() - 1);
+      endDate.setDate(today.getDate() - 3);
       document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
       document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
     }
