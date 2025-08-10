@@ -445,6 +445,14 @@
       border-color: rgba(255, 0, 110, 0.4);
       color: #ff006e;
     }
+
+    .url-analysis {
+      background: rgba(0, 245, 147, 0.1);
+      border: 1px solid rgba(0, 245, 147, 0.3);
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -458,7 +466,7 @@
             Reddit Scraper Ultra Pro
             <span class="text-2xl px-3 py-1 bg-red-500/20 border border-red-500/30 rounded-full">MASSIVE</span>
           </h1>
-          <p class="text-gray-300 text-lg">Sistema avançado de extração massiva de posts, links e mídia do Reddit</p>
+          <p class="text-gray-300 text-lg">Sistema avançado de extração massiva com detecção de limitações temporais</p>
           <div class="mt-3 flex items-center gap-4">
             <div class="live-indicator">
               <span class="pulse-dot"></span>
@@ -470,14 +478,22 @@
             <div class="px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full">
               <span class="text-sm text-purple-300">🔄 Paginação Automática</span>
             </div>
-            <span class="text-gray-400 text-sm">v3.0 MASSIVE</span>
+            <div class="px-3 py-1 bg-orange-500/20 border border-orange-500/30 rounded-full">
+              <span class="text-sm text-orange-300">⏰ Limitações Temporais</span>
+            </div>
+            <span class="text-gray-400 text-sm">v4.2 TEMPORAL PLUS</span>
           </div>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div class="stat-card rounded-xl p-4 text-center">
             <div class="text-3xl mb-1">📝</div>
             <div class="text-3xl font-bold text-white" id="totalPosts">0</div>
             <div class="text-xs text-gray-400">Posts</div>
+          </div>
+          <div class="stat-card rounded-xl p-4 text-center">
+            <div class="text-3xl mb-1">🔄</div>
+            <div class="text-3xl font-bold text-white" id="recursivePosts">0</div>
+            <div class="text-xs text-gray-400">Recursivos</div>
           </div>
           <div class="stat-card rounded-xl p-4 text-center">
             <div class="text-3xl mb-1">🔗</div>
@@ -545,11 +561,23 @@ https://thingproxy.freeboard.io/fetch/</textarea>
           <textarea
             id="urlInput"
             class="w-full p-4 rounded-xl text-white placeholder-gray-500 focus:placeholder-gray-400 transition-all resize-none"
-            placeholder="Cole URLs de posts, subreddits ou pesquisas do Reddit&#10;&#10;Exemplos aceitos:&#10;✓ https://reddit.com/r/programming/comments/xyz&#10;✓ https://reddit.com/r/technology/new&#10;✓ https://reddit.com/r/science/top&#10;✓ https://reddit.com/r/science/search?q=AI"
+            placeholder="Cole URLs de posts, subreddits ou pesquisas do Reddit&#10;&#10;Exemplos aceitos:&#10;✓ https://reddit.com/r/programming/comments/xyz&#10;✓ https://reddit.com/r/technology/new&#10;✓ https://reddit.com/r/science/top&#10;✓ https://reddit.com/r/science/search?q=AI&#10;✓ https://reddit.com/r/IMGreddit/search/?q=old&type=posts&sort=hot&#10;&#10;⚠️ Atenção: Posts muito antigos (1+ anos) têm limitações no Reddit!"
             rows="7"
           ></textarea>
           
+          <!-- URL Analysis Display -->
+          <div id="urlAnalysis" class="url-analysis hidden mt-4">
+            <h4 class="text-white font-semibold mb-2">🔍 Análise das URLs:</h4>
+            <div id="urlAnalysisContent"></div>
+          </div>
+          
           <div class="mt-4 flex flex-wrap gap-2">
+            <button onclick="analyzeUrls()" class="px-4 py-2 info-button text-white rounded-lg font-semibold flex items-center gap-2">
+              <span>🔍</span> Analisar URLs
+            </button>
+            <button onclick="diagnoseUrls()" class="px-4 py-2 warning-button text-black rounded-lg font-semibold flex items-center gap-2">
+              <span>🩺</span> Diagnóstico
+            </button>
             <button onclick="addExampleUrls()" class="px-4 py-2 info-button text-white rounded-lg font-semibold flex items-center gap-2">
               <span>📝</span> Exemplos
             </button>
@@ -619,6 +647,7 @@ https://thingproxy.freeboard.io/fetch/</textarea>
                 type="date"
                 id="startDate"
                 class="w-full p-3 rounded-lg"
+                onchange="checkDateLimitations()"
               />
             </div>
             <div>
@@ -627,7 +656,24 @@ https://thingproxy.freeboard.io/fetch/</textarea>
                 type="date"
                 id="endDate"
                 class="w-full p-3 rounded-lg"
+                onchange="checkDateLimitations()"
               />
+            </div>
+          </div>
+
+          <!-- Date Limitations Warning -->
+          <div id="dateLimitationsWarning" class="hidden mt-3 p-4 rounded-xl border">
+            <h4 class="font-semibold mb-2 flex items-center gap-2">
+              <span>⚠️</span> <span id="dateLimitationsTitle">Limitações de Data Detectadas</span>
+            </h4>
+            <div id="dateLimitationsContent"></div>
+            <div class="mt-3 flex gap-2">
+              <button onclick="optimizeForOldContent()" class="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded text-sm transition-all">
+                🔧 Otimizar para Conteúdo Antigo
+              </button>
+              <button onclick="useRecommendedDates()" class="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded text-sm transition-all">
+                📅 Usar Datas Recomendadas
+              </button>
             </div>
           </div>
 
@@ -668,9 +714,38 @@ https://thingproxy.freeboard.io/fetch/</textarea>
               <input type="checkbox" id="continueOnError" checked class="mr-3">
               <span>Continuar em caso de erro</span>
             </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="smartSearchParsing" checked class="mr-3">
+              <span>🧠 Análise inteligente de URLs de busca</span>
+            </label>
+            <label class="flex items-center text-gray-300 cursor-pointer hover:text-white transition-colors">
+              <input type="checkbox" id="recursiveRedditScraping" checked class="mr-3">
+              <span>🔄 Scraping recursivo de links do Reddit</span>
+            </label>
+            <div class="grid grid-cols-2 gap-4 mt-3">
+              <div>
+                <label class="text-gray-300 text-xs mb-1 block">🔄 Profundidade máxima:</label>
+                <select id="maxRecursionDepth" class="w-full p-2 rounded-lg text-sm">
+                  <option value="1">1 nível (apenas links diretos)</option>
+                  <option value="2" selected>2 níveis</option>
+                  <option value="3">3 níveis</option>
+                  <option value="4">4 níveis (cuidado com tempo)</option>
+                  <option value="5">5 níveis (muito lento)</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-gray-300 text-xs mb-1 block">⏱️ Delay entre links (ms):</label>
+                <select id="recursionDelay" class="w-full p-2 rounded-lg text-sm">
+                  <option value="1000">1 segundo</option>
+                  <option value="2000" selected>2 segundos</option>
+                  <option value="3000">3 segundos</option>
+                  <option value="5000">5 segundos</option>
+                </select>
+              </div>
+            </div>
             <div class="mt-3 p-3 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg">
-              <p class="text-sm text-white font-semibold">💡 Sistema Massivo:</p>
-              <p class="text-xs text-gray-300 mt-1">Agora capaz de buscar milhares de posts usando paginação automática e rotação de proxies!</p>
+              <p class="text-sm text-white font-semibold">💡 Sistema Massivo Plus:</p>
+              <p class="text-xs text-gray-300 mt-1">Agora com scraping recursivo automático de links do Reddit encontrados nos posts!</p>
             </div>
           </div>
         </div>
@@ -702,6 +777,9 @@ https://thingproxy.freeboard.io/fetch/</textarea>
         </button>
         <button onclick="extractAllImages()" class="success-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
           <span>🖼️</span> Extrair Imagens
+        </button>
+        <button onclick="processRecursiveRedditLinks()" class="info-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
+          <span>🔄</span> Scraping Recursivo
         </button>
         <button onclick="downloadPosts('txt')" class="info-button text-white px-6 py-4 rounded-xl font-bold flex items-center gap-2">
           <span>📄</span> Download TXT
@@ -1010,6 +1088,9 @@ https://thingproxy.freeboard.io/fetch/</textarea>
     let searchResults = [];
     let lastSearchQuery = '';
     let searchHistory = [];
+    let recursiveRedditLinks = [];
+    let processedRedditLinks = new Set();
+    let recursionDepth = 0;
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
@@ -1034,23 +1115,29 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       
       // Welcome message
       if (posts.length === 0) {
-        showNotification('🚀 Sistema Massivo com Busca Booleana pronto! Use Ctrl+K para buscar', 'info');
+        showNotification('🚀 Sistema Recursive Plus com Detecção de Limitações Temporais pronto! Use Ctrl+K para buscar', 'info');
       }
       
-      console.log('🚀 Reddit Scraper Ultra Pro MASSIVE inicializado!');
+      console.log('🚀 Reddit Scraper Ultra Pro RECURSIVE PLUS inicializado!');
       console.log('💪 Sistema com paginação automática, rotação de proxies e busca booleana');
-      console.log('🔍 Use Ctrl+K para abrir a busca avançada');
+      console.log('🔄 Scraping recursivo automático de links do Reddit encontrados');
+      console.log('⏰ Detecção inteligente de limitações para conteúdo antigo');
+      console.log('🔍 Suporte completo para URLs complexas de busca do Reddit');
+      console.log('🧠 Use Ctrl+K para abrir a busca avançada');
     });
 
-    // Set default dates
+    // Set default dates and check limitations
     function setDefaultDates() {
       const today = new Date();
       const startDate = new Date(today);
-      startDate.setDate(today.getDate() - 10);
+      startDate.setDate(today.getDate() - 30); // Last 30 days instead of going too far back
       const endDate = new Date(today);
-      endDate.setDate(today.getDate() - 3);
+      endDate.setDate(today.getDate() - 1);
       document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
       document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+      
+      // Check for any date limitations
+      setTimeout(() => checkDateLimitations(), 100);
     }
 
     // Initialize proxies
@@ -1062,6 +1149,1089 @@ https://thingproxy.freeboard.io/fetch/</textarea>
         lastUsed: 0,
         failCount: 0
       }));
+    }
+
+    // Enhanced URL Analysis Function
+    function analyzeUrls() {
+      const urlInput = document.getElementById('urlInput').value.trim();
+      if (!urlInput) {
+        showNotification('⚠️ Por favor, insira URLs para analisar', 'warning');
+        return;
+      }
+
+      const urls = urlInput.split('\n').map(u => u.trim()).filter(u => u);
+      const analysis = [];
+
+      urls.forEach((url, index) => {
+        const analyzed = analyzeRedditUrl(url);
+        analysis.push({
+          index: index + 1,
+          url: url,
+          type: analyzed.type,
+          details: analyzed.details,
+          apiUrl: analyzed.apiUrl,
+          isValid: analyzed.isValid,
+          warnings: analyzed.warnings || [],
+          searchParams: analyzed.searchParams || {}
+        });
+      });
+
+      displayUrlAnalysis(analysis);
+      
+      // Test the first URL if it's a search and show preview
+      const firstSearchUrl = analysis.find(a => a.type === 'search' && a.isValid);
+      if (firstSearchUrl) {
+        testSearchUrl(firstSearchUrl);
+      }
+      
+      showNotification(`🔍 ${analysis.length} URLs analisadas!`, 'success');
+    }
+    
+    // Test a search URL to validate it works
+    async function testSearchUrl(analyzedUrl) {
+      console.log('🧪 Testando URL de busca:', analyzedUrl.apiUrl);
+      
+      try {
+        // Test with limit=1 to see if API responds
+        const testUrl = analyzedUrl.apiUrl + (analyzedUrl.apiUrl.includes('?') ? '&' : '?') + 'limit=1';
+        
+        showNotification('🧪 Testando URL da API...', 'info');
+        
+        const data = await fetchWithRetry(testUrl, 1);
+        
+        if (data && data.data && data.data.children) {
+          const resultCount = data.data.children.length;
+          const hasMore = data.data.after;
+          
+          console.log('✅ Teste da URL bem-sucedido:', {
+            resultados: resultCount,
+            hasMore: hasMore,
+            query: analyzedUrl.searchParams.query
+          });
+          
+          showNotification(
+            `✅ URL testada com sucesso!\n📊 ${resultCount} resultado(s) encontrado(s)\n${hasMore ? '📄 Mais páginas disponíveis' : '📄 Apenas uma página'}`, 
+            'success'
+          );
+          
+          // Update the analysis display with test results
+          updateAnalysisWithTestResults(analyzedUrl.index, {
+            tested: true,
+            success: true,
+            resultCount: resultCount,
+            hasMore: hasMore
+          });
+          
+        } else {
+          throw new Error('Resposta da API sem dados válidos');
+        }
+        
+      } catch (error) {
+        console.error('❌ Teste da URL falhou:', error);
+        
+        showNotification(
+          `❌ Teste da URL falhou: ${error.message}\n\nPossíveis causas:\n- Query muito específica\n- Subreddit não existe\n- Problemas de proxy`, 
+          'error'
+        );
+        
+        updateAnalysisWithTestResults(analyzedUrl.index, {
+          tested: true,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    // Update analysis display with test results
+    function updateAnalysisWithTestResults(urlIndex, testResults) {
+      const container = document.getElementById('urlAnalysisContent');
+      if (!container) return;
+      
+      const urlElement = container.querySelector(`[data-url-index="${urlIndex}"]`);
+      if (!urlElement) return;
+      
+      const testResultDiv = urlElement.querySelector('.test-results') || document.createElement('div');
+      testResultDiv.className = 'test-results mt-2 p-2 rounded-lg text-xs';
+      
+      if (testResults.success) {
+        testResultDiv.className += ' bg-green-500/10 border border-green-500/20';
+        testResultDiv.innerHTML = `
+          <div class="text-green-400 font-semibold">✅ Teste bem-sucedido</div>
+          <div class="text-green-300">📊 ${testResults.resultCount} resultado(s) encontrado(s)</div>
+          ${testResults.hasMore ? '<div class="text-green-300">📄 Mais páginas disponíveis</div>' : '<div class="text-yellow-300">📄 Apenas uma página</div>'}
+        `;
+      } else {
+        testResultDiv.className += ' bg-red-500/10 border border-red-500/20';
+        testResultDiv.innerHTML = `
+          <div class="text-red-400 font-semibold">❌ Teste falhou</div>
+          <div class="text-red-300">${testResults.error}</div>
+        `;
+      }
+      
+      if (!urlElement.querySelector('.test-results')) {
+        urlElement.appendChild(testResultDiv);
+      }
+    }
+
+    // Enhanced Reddit URL Analysis with date limitations detection
+    function analyzeRedditUrl(url) {
+      try {
+        const urlObj = new URL(url);
+        const pathname = urlObj.pathname;
+        const searchParams = urlObj.searchParams;
+
+        // Single post URL
+        if (pathname.includes('/comments/')) {
+          const postId = pathname.match(/comments\/([a-z0-9]+)/i)?.[1];
+          return {
+            type: 'post',
+            details: `Post ID: ${postId}`,
+            apiUrl: `${url.replace(/\/$/, '')}.json`,
+            isValid: !!postId
+          };
+        }
+
+        // Search URL - Enhanced parsing with date limitations detection
+        if (pathname.includes('/search') || searchParams.has('q')) {
+          const subreddit = pathname.split('/')[2];
+          const query = searchParams.get('q') || '';
+          const sort = searchParams.get('sort') || 'relevance';
+          const type = searchParams.get('type') || '';
+          const time = searchParams.get('t') || '';
+          const cId = searchParams.get('cId') || '';
+          const iId = searchParams.get('iId') || '';
+          
+          const warnings = [];
+          
+          // Check for problematic parameters
+          if (cId || iId) {
+            warnings.push('Parâmetros cId/iId removidos da API (são específicos da interface web)');
+          }
+          
+          // Date limitations analysis
+          const dateLimitations = analyzeDateLimitations(time, sort);
+          if (dateLimitations.warnings.length > 0) {
+            warnings.push(...dateLimitations.warnings);
+          }
+          
+          // Build clean API URL - Remove web-only parameters like cId and iId
+          let apiUrl = `https://www.reddit.com/r/${subreddit}/search.json?q=${encodeURIComponent(query)}&restrict_sr=on`;
+          
+          // Add only API-supported parameters with date optimization
+          if (sort && sort !== 'relevance') {
+            // For old content, prefer 'top' or 'new' over 'relevance'
+            if (dateLimitations.isOldContent && sort === 'relevance') {
+              apiUrl += `&sort=new`;
+              warnings.push('Sort alterado de "relevance" para "new" para melhor busca de conteúdo antigo');
+            } else {
+              apiUrl += `&sort=${sort}`;
+            }
+          }
+          
+          if (type && type === 'link') apiUrl += `&type=link`;
+          
+          // Time parameter validation
+          if (time && ['hour', 'day', 'week', 'month', 'year', 'all'].includes(time)) {
+            if (dateLimitations.isOldContent && time !== 'all') {
+              apiUrl += `&t=all`;
+              warnings.push(`Parâmetro de tempo alterado para "all" para buscar conteúdo antigo`);
+            } else {
+              apiUrl += `&t=${time}`;
+            }
+          }
+          
+          return {
+            type: 'search',
+            details: `Subreddit: r/${subreddit}, Query: "${query}", Sort: ${sort}${type ? `, Type: ${type}` : ''}${cId ? `, cId: ${cId.substring(0, 8)}...` : ''}`,
+            apiUrl: apiUrl,
+            isValid: !!(subreddit && query),
+            searchParams: { query, sort, type, time, cId, iId },
+            warnings: warnings,
+            dateLimitations: dateLimitations
+          };
+        }
+
+        // Subreddit listing URL
+        if (pathname.match(/^\/r\/[^\/]+\/?(?:hot|new|top|rising)?$/)) {
+          const pathParts = pathname.split('/').filter(p => p);
+          const subreddit = pathParts[1];
+          const sort = pathParts[2] || 'hot';
+          const time = searchParams.get('t') || '';
+          
+          const warnings = [];
+          const dateLimitations = analyzeDateLimitations(time, sort);
+          if (dateLimitations.warnings.length > 0) {
+            warnings.push(...dateLimitations.warnings);
+          }
+          
+          let apiUrl = `https://www.reddit.com/r/${subreddit}/${sort}.json`;
+          if (time && ['hour', 'day', 'week', 'month', 'year', 'all'].includes(time)) {
+            apiUrl += `?t=${time}`;
+          }
+          
+          return {
+            type: 'subreddit',
+            details: `Subreddit: r/${subreddit}, Sort: ${sort}${time ? `, Time: ${time}` : ''}`,
+            apiUrl: apiUrl,
+            isValid: !!subreddit,
+            warnings: warnings,
+            dateLimitations: dateLimitations
+          };
+        }
+
+        // Generic subreddit URL
+        if (pathname.match(/^\/r\/[^\/]+/)) {
+          const subreddit = pathname.split('/')[2];
+          return {
+            type: 'subreddit',
+            details: `Subreddit: r/${subreddit} (padrão: hot)`,
+            apiUrl: `https://www.reddit.com/r/${subreddit}/hot.json`,
+            isValid: !!subreddit
+          };
+        }
+
+        return {
+          type: 'unknown',
+          details: 'URL não reconhecida',
+          apiUrl: null,
+          isValid: false,
+          warnings: ['Tipo de URL não suportado']
+        };
+
+      } catch (error) {
+        return {
+          type: 'invalid',
+          details: `Erro: ${error.message}`,
+          apiUrl: null,
+          isValid: false,
+          warnings: ['URL inválida']
+        };
+      }
+    }
+
+    // Analyze date limitations for Reddit searches
+    function analyzeDateLimitations(timeParam, sortParam) {
+      const result = {
+        isOldContent: false,
+        warnings: [],
+        recommendations: [],
+        limitations: []
+      };
+      
+      // Check global date filters
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      
+      if (startDate || endDate) {
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+        const now = new Date();
+        const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        const twoYearsAgo = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+        
+        // Check if searching for old content
+        if (start && start < oneYearAgo) {
+          result.isOldContent = true;
+          
+          if (start < twoYearsAgo) {
+            result.warnings.push('⚠️ ATENÇÃO: Buscando posts de mais de 2 anos - limitações severas do Reddit');
+            result.limitations.push('Posts muito antigos podem não aparecer na busca do Reddit');
+            result.limitations.push('Paginação limitada para conteúdo de 2+ anos');
+            result.recommendations.push('Considere reduzir o escopo da data');
+            result.recommendations.push('Use sort "new" ao invés de "relevance" para conteúdo antigo');
+          } else {
+            result.warnings.push('⚠️ Buscando posts de mais de 1 ano - algumas limitações aplicáveis');
+            result.limitations.push('Busca por relevância pode não funcionar bem para posts antigos');
+            result.recommendations.push('Prefira sort "new" ou "top" para conteúdo antigo');
+          }
+          
+          result.recommendations.push('Use parâmetro de tempo "all" para buscar todo o histórico');
+        }
+      }
+      
+      // Check time parameter limitations
+      if (timeParam && timeParam !== 'all' && result.isOldContent) {
+        result.warnings.push(`Parâmetro de tempo "${timeParam}" pode não funcionar para conteúdo antigo`);
+        result.recommendations.push('Use "all" para buscar todo o período disponível');
+      }
+      
+      // Sort parameter recommendations for old content
+      if (result.isOldContent) {
+        if (sortParam === 'hot' || sortParam === 'rising') {
+          result.warnings.push(`Sort "${sortParam}" não é ideal para conteúdo antigo`);
+          result.recommendations.push('Use "new" ou "top" para conteúdo antigo');
+        }
+        
+        if (sortParam === 'relevance') {
+          result.warnings.push('Sort "relevance" pode não encontrar posts antigos');
+          result.recommendations.push('Prefira "new" para busca cronológica de conteúdo antigo');
+        }
+      }
+      
+      return result;
+    }
+
+    // ==================== RECURSIVE REDDIT SCRAPING ====================
+
+    // Extract Reddit links from all collected links
+    function extractRedditLinks() {
+      const redditLinks = [];
+      const redditLinkRegex = /https?:\/\/(www\.)?reddit\.com\/r\/[^\/]+\/(comments|posts)\/[a-z0-9]+/gi;
+      
+      extractedLinks.forEach(link => {
+        if (redditLinkRegex.test(link.url) && !processedRedditLinks.has(link.url)) {
+          redditLinks.push({
+            url: link.url,
+            source: link.source,
+            depth: 1,
+            parentPost: link.postUrl
+          });
+        }
+      });
+      
+      // Also check in post content and comments for Reddit links
+      posts.forEach(post => {
+        const allText = post.content + ' ' + extractTextFromComments(post.comments);
+        const matches = allText.match(redditLinkRegex) || [];
+        
+        matches.forEach(match => {
+          if (!processedRedditLinks.has(match)) {
+            redditLinks.push({
+              url: match,
+              source: `Post: ${post.title}`,
+              depth: 1,
+              parentPost: post.url
+            });
+          }
+        });
+      });
+      
+      return [...new Set(redditLinks.map(l => l.url))].map(url => 
+        redditLinks.find(l => l.url === url)
+      );
+    }
+
+    // Extract text from comments recursively for Reddit link detection
+    function extractTextFromComments(comments) {
+      let text = '';
+      if (!comments) return text;
+      
+      comments.forEach(comment => {
+        text += comment.body + ' ';
+        if (comment.replies) {
+          text += extractTextFromComments(comment.replies);
+        }
+      });
+      
+      return text;
+    }
+
+    // Process Reddit links recursively
+    async function processRecursiveRedditLinks() {
+      if (!document.getElementById('recursiveRedditScraping').checked) {
+        return;
+      }
+      
+      const maxDepth = parseInt(document.getElementById('maxRecursionDepth').value);
+      const delay = parseInt(document.getElementById('recursionDelay').value);
+      
+      showNotification('🔄 Iniciando scraping recursivo de links do Reddit...', 'info');
+      
+      // Extract Reddit links from current collection
+      recursiveRedditLinks = extractRedditLinks();
+      
+      if (recursiveRedditLinks.length === 0) {
+        showNotification('ℹ️ Nenhum link do Reddit encontrado para scraping recursivo', 'info');
+        return;
+      }
+      
+      console.log(`🔄 Encontrados ${recursiveRedditLinks.length} links do Reddit para processar`);
+      
+      let currentDepth = 1;
+      let linksToProcess = [...recursiveRedditLinks];
+      
+      while (currentDepth <= maxDepth && linksToProcess.length > 0 && !isStopped) {
+        console.log(`🔄 Processando nível ${currentDepth} - ${linksToProcess.length} links`);
+        
+        updateBatchProgress(`Recursivo Nível ${currentDepth}`, 0, linksToProcess.length, 'loading');
+        
+        const newLinksFound = [];
+        
+        for (let i = 0; i < linksToProcess.length; i++) {
+          if (isStopped || isPaused) break;
+          
+          const linkObj = linksToProcess[i];
+          const url = linkObj.url;
+          
+          // Skip if already processed
+          if (processedRedditLinks.has(url)) {
+            continue;
+          }
+          
+          try {
+            console.log(`🔄 [Nível ${currentDepth}] Processando: ${url}`);
+            
+            // Mark as processed
+            processedRedditLinks.add(url);
+            
+            // Fetch the Reddit post
+            const post = await fetchRedditPost(url);
+            
+            if (post) {
+              // Mark as recursive post
+              post.isRecursive = true;
+              post.recursionDepth = currentDepth;
+              post.recursionSource = linkObj.source;
+              post.recursionParent = linkObj.parentPost;
+              
+              if (addPost(post)) {
+                console.log(`✅ [Nível ${currentDepth}] Post adicionado: ${post.title}`);
+                
+                // If we're not at max depth, look for more Reddit links in this post
+                if (currentDepth < maxDepth) {
+                  const postText = post.content + ' ' + extractTextFromComments(post.comments);
+                  const redditLinkRegex = /https?:\/\/(www\.)?reddit\.com\/r\/[^\/]+\/(comments|posts)\/[a-z0-9]+/gi;
+                  const matches = postText.match(redditLinkRegex) || [];
+                  
+                  matches.forEach(match => {
+                    if (!processedRedditLinks.has(match)) {
+                      newLinksFound.push({
+                        url: match,
+                        source: `[Nível ${currentDepth}] ${post.title}`,
+                        depth: currentDepth + 1,
+                        parentPost: url
+                      });
+                    }
+                  });
+                }
+              }
+            }
+            
+            updateBatchProgress(`Recursivo Nível ${currentDepth}`, i + 1, linksToProcess.length, 'loading');
+            
+            // Delay between requests
+            if (i < linksToProcess.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            
+          } catch (error) {
+            console.error(`❌ [Nível ${currentDepth}] Erro ao processar ${url}:`, error);
+          }
+        }
+        
+        updateBatchProgress(`Recursivo Nível ${currentDepth}`, linksToProcess.length, linksToProcess.length, 'complete');
+        
+        // Prepare for next depth level
+        currentDepth++;
+        linksToProcess = [...new Set(newLinksFound.map(l => l.url))].map(url => 
+          newLinksFound.find(l => l.url === url)
+        );
+        
+        if (linksToProcess.length > 0) {
+          console.log(`🔄 Nível ${currentDepth} preparado com ${linksToProcess.length} novos links`);
+        }
+      }
+      
+      const recursivePosts = posts.filter(p => p.isRecursive);
+      if (recursivePosts.length > 0) {
+        showNotification(`✅ Scraping recursivo concluído! ${recursivePosts.length} posts adicionais coletados`, 'success');
+      }
+      
+      updateStats();
+    }
+
+    // Show recursive tree for a post
+    function showRecursiveTree(postId) {
+      const post = posts.find(p => p.id === postId);
+      if (!post || !post.isRecursive) return;
+      
+      // Find all posts that came from this post's links
+      const childPosts = posts.filter(p => p.recursionParent === post.url);
+      
+      // Find the parent post that led to this one
+      const parentPost = posts.find(p => p.url === post.recursionParent);
+      
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50';
+      modal.innerHTML = `
+        <div class="dark-glass rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <span>🔄</span> Árvore de Scraping Recursivo
+          </h3>
+          
+          <div class="space-y-4">
+            ${parentPost ? `
+              <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <h4 class="text-blue-300 font-semibold mb-2">📍 Post Pai (Nível ${parentPost.recursionDepth || 0}):</h4>
+                <p class="text-white">${parentPost.title}</p>
+                <a href="${parentPost.url}" target="_blank" class="text-blue-400 hover:underline text-sm">
+                  ${parentPost.url}
+                </a>
+              </div>
+            ` : ''}
+            
+            <div class="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <h4 class="text-yellow-300 font-semibold mb-2">🎯 Post Atual (Nível ${post.recursionDepth}):</h4>
+              <p class="text-white font-bold">${post.title}</p>
+              <p class="text-gray-300 text-sm mt-1">Encontrado via: ${post.recursionSource}</p>
+              <a href="${post.url}" target="_blank" class="text-yellow-400 hover:underline text-sm">
+                ${post.url}
+              </a>
+            </div>
+            
+            ${childPosts.length > 0 ? `
+              <div class="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <h4 class="text-green-300 font-semibold mb-2">🌟 Posts Filhos (${childPosts.length}):</h4>
+                <div class="space-y-2 max-h-48 overflow-y-auto">
+                  ${childPosts.map(child => `
+                    <div class="p-2 bg-black/30 rounded">
+                      <p class="text-white text-sm">${child.title}</p>
+                      <p class="text-gray-400 text-xs">Nível ${child.recursionDepth}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          
+          <div class="mt-6 flex justify-end">
+            <button onclick="this.parentElement.parentElement.parentElement.remove()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">
+              Fechar
+            </button>
+          </div>
+        </div>
+      `;
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+      };
+      document.body.appendChild(modal);
+    }
+    
+    // Comprehensive URL and system diagnosis
+    async function diagnoseUrls() {
+      const urlInput = document.getElementById('urlInput').value.trim();
+      
+      if (!urlInput) {
+        showNotification('⚠️ Por favor, insira URLs para diagnosticar', 'warning');
+        return;
+      }
+      
+      const diagnosis = {
+        urls: [],
+        proxies: {
+          total: workingProxies.length,
+          working: workingProxies.filter(p => p.status === 'working').length,
+          failed: workingProxies.filter(p => p.status === 'failed').length
+        },
+        recommendations: []
+      };
+      
+      showNotification('🩺 Executando diagnóstico completo...', 'info');
+      
+      // Analyze each URL
+      const urls = urlInput.split('\n').map(u => u.trim()).filter(u => u);
+      
+      for (const url of urls) {
+        const analyzed = analyzeRedditUrl(url);
+        const urlDiagnosis = {
+          url: url,
+          analyzed: analyzed,
+          issues: [],
+          suggestions: []
+        };
+        
+        // Check for common issues
+        if (!analyzed.isValid) {
+          urlDiagnosis.issues.push('URL inválida ou não reconhecida');
+          urlDiagnosis.suggestions.push('Verifique se a URL está completa e correta');
+        }
+        
+        if (analyzed.type === 'search') {
+          if (!analyzed.searchParams.query || analyzed.searchParams.query.length < 2) {
+            urlDiagnosis.issues.push('Query de busca muito curta ou vazia');
+            urlDiagnosis.suggestions.push('Use uma query com pelo menos 2 caracteres');
+          }
+          
+          if (analyzed.searchParams.cId || analyzed.searchParams.iId) {
+            urlDiagnosis.suggestions.push('Parâmetros cId/iId foram removidos automaticamente (são específicos da interface web)');
+          }
+          
+          // Test the search URL if valid
+          if (analyzed.isValid) {
+            try {
+              const testUrl = analyzed.apiUrl + (analyzed.apiUrl.includes('?') ? '&' : '?') + 'limit=1';
+              const testData = await fetchWithRetry(testUrl, 1);
+              
+              if (testData && testData.data && testData.data.children) {
+                urlDiagnosis.testResult = {
+                  success: true,
+                  resultCount: testData.data.children.length,
+                  hasMore: !!testData.data.after
+                };
+              } else {
+                urlDiagnosis.testResult = {
+                  success: false,
+                  error: 'API retornou dados inválidos'
+                };
+                urlDiagnosis.issues.push('A URL não retorna resultados válidos');
+              }
+            } catch (error) {
+              urlDiagnosis.testResult = {
+                success: false,
+                error: error.message
+              };
+              urlDiagnosis.issues.push(`Erro ao testar URL: ${error.message}`);
+              
+              if (error.message.includes('fetch')) {
+                urlDiagnosis.suggestions.push('Problema de conectividade - verifique os proxies');
+              }
+            }
+          }
+        }
+        
+        diagnosis.urls.push(urlDiagnosis);
+      }
+      
+      // System-wide recommendations
+      if (diagnosis.proxies.working === 0) {
+        diagnosis.recommendations.push('❌ Nenhum proxy funcionando - teste os proxies antes de continuar');
+      } else if (diagnosis.proxies.working < 2) {
+        diagnosis.recommendations.push('⚠️ Poucos proxies funcionando - adicione mais para melhor estabilidade');
+      }
+      
+      const hasProblematicUrls = diagnosis.urls.some(u => u.issues.length > 0);
+      if (hasProblematicUrls) {
+        diagnosis.recommendations.push('🔧 Algumas URLs apresentam problemas - veja detalhes abaixo');
+      }
+      
+      // Display diagnosis results
+      displayDiagnosisResults(diagnosis);
+    }
+    
+    // Display comprehensive diagnosis results
+    function displayDiagnosisResults(diagnosis) {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50';
+      
+      const problemUrls = diagnosis.urls.filter(u => u.issues.length > 0);
+      const workingUrls = diagnosis.urls.filter(u => u.issues.length === 0);
+      
+      modal.innerHTML = `
+        <div class="dark-glass rounded-xl p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <h3 class="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+            <span>🩺</span> Diagnóstico Completo do Sistema
+          </h3>
+          
+          <!-- System Status -->
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <h4 class="text-blue-300 font-semibold mb-2">📊 URLs Analisadas</h4>
+              <p class="text-white text-2xl font-bold">${diagnosis.urls.length}</p>
+              <p class="text-gray-400 text-sm">${workingUrls.length} funcionando, ${problemUrls.length} com problemas</p>
+            </div>
+            <div class="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <h4 class="text-green-300 font-semibold mb-2">🔧 Status dos Proxies</h4>
+              <p class="text-white text-2xl font-bold">${diagnosis.proxies.working}/${diagnosis.proxies.total}</p>
+              <p class="text-gray-400 text-sm">proxies funcionando</p>
+            </div>
+            <div class="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+              <h4 class="text-purple-300 font-semibold mb-2">💡 Recomendações</h4>
+              <p class="text-white text-2xl font-bold">${diagnosis.recommendations.length}</p>
+              <p class="text-gray-400 text-sm">sugestões do sistema</p>
+            </div>
+          </div>
+          
+          <!-- Recommendations -->
+          ${diagnosis.recommendations.length > 0 ? `
+            <div class="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <h4 class="text-yellow-300 font-semibold mb-3">💡 Recomendações do Sistema:</h4>
+              <div class="space-y-2">
+                ${diagnosis.recommendations.map(rec => `
+                  <div class="text-yellow-200 text-sm">• ${rec}</div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+          
+          <!-- URL Analysis -->
+          <div class="grid md:grid-cols-2 gap-6">
+            <!-- Working URLs -->
+            ${workingUrls.length > 0 ? `
+              <div>
+                <h4 class="text-green-300 font-semibold mb-3 flex items-center gap-2">
+                  <span>✅</span> URLs Funcionando (${workingUrls.length})
+                </h4>
+                <div class="space-y-3 max-h-64 overflow-y-auto">
+                  ${workingUrls.map(urlDiag => `
+                    <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <div class="text-green-300 font-semibold text-sm mb-1">${urlDiag.analyzed.type.toUpperCase()}</div>
+                      <div class="text-gray-300 text-xs break-all mb-2">${urlDiag.url}</div>
+                      ${urlDiag.testResult ? `
+                        <div class="text-green-400 text-xs">
+                          🧪 Teste: ${urlDiag.testResult.resultCount} resultado(s) encontrado(s)
+                        </div>
+                      ` : ''}
+                      ${urlDiag.suggestions.length > 0 ? `
+                        <div class="mt-2 text-blue-300 text-xs">
+                          ${urlDiag.suggestions.map(s => `• ${s}`).join('<br>')}
+                        </div>
+                      ` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+            
+            <!-- Problem URLs -->
+            ${problemUrls.length > 0 ? `
+              <div>
+                <h4 class="text-red-300 font-semibold mb-3 flex items-center gap-2">
+                  <span>❌</span> URLs com Problemas (${problemUrls.length})
+                </h4>
+                <div class="space-y-3 max-h-64 overflow-y-auto">
+                  ${problemUrls.map(urlDiag => `
+                    <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <div class="text-red-300 font-semibold text-sm mb-1">${urlDiag.analyzed.type.toUpperCase()}</div>
+                      <div class="text-gray-300 text-xs break-all mb-2">${urlDiag.url}</div>
+                      
+                      ${urlDiag.issues.length > 0 ? `
+                        <div class="mb-2">
+                          <div class="text-red-400 text-xs font-semibold">Problemas:</div>
+                          ${urlDiag.issues.map(issue => `
+                            <div class="text-red-300 text-xs">• ${issue}</div>
+                          `).join('')}
+                        </div>
+                      ` : ''}
+                      
+                      ${urlDiag.suggestions.length > 0 ? `
+                        <div>
+                          <div class="text-blue-400 text-xs font-semibold">Sugestões:</div>
+                          ${urlDiag.suggestions.map(suggestion => `
+                            <div class="text-blue-300 text-xs">• ${suggestion}</div>
+                          `).join('')}
+                        </div>
+                      ` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          
+          <div class="mt-6 flex justify-end gap-3">
+            <button onclick="testAllProxies()" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg">
+              🧪 Testar Proxies
+            </button>
+            <button onclick="this.parentElement.parentElement.parentElement.remove()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">
+              Fechar
+            </button>
+          </div>
+        </div>
+      `;
+      
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+      };
+      
+      document.body.appendChild(modal);
+      
+      // Show summary notification
+      const summary = `🩺 Diagnóstico: ${workingUrls.length} URLs OK, ${problemUrls.length} com problemas, ${diagnosis.proxies.working} proxies funcionando`;
+      showNotification(summary, problemUrls.length > 0 ? 'warning' : 'success');
+    }
+
+    // Check date limitations when user changes dates
+    function checkDateLimitations() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const warningDiv = document.getElementById('dateLimitationsWarning');
+      const titleEl = document.getElementById('dateLimitationsTitle');
+      const contentEl = document.getElementById('dateLimitationsContent');
+      
+      if (!startDate && !endDate) {
+        warningDiv.classList.add('hidden');
+        return;
+      }
+      
+      const now = new Date();
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      const twoYearsAgo = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+      
+      let isOldContent = false;
+      let warnings = [];
+      let severity = 'warning'; // warning, error, info
+      
+      if (start && start < twoYearsAgo) {
+        isOldContent = true;
+        severity = 'error';
+        titleEl.textContent = 'Limitações Severas - Conteúdo Muito Antigo';
+        warnings.push('Posts de mais de 2 anos têm disponibilidade muito limitada no Reddit');
+        warnings.push('A paginação pode parar após poucas páginas');
+        warnings.push('Resultados podem ser inconsistentes ou incompletos');
+        warnings.push('Sort por "relevance" provavelmente não funcionará');
+      } else if (start && start < oneYearAgo) {
+        isOldContent = true;
+        severity = 'warning';
+        titleEl.textContent = 'Limitações Moderadas - Conteúdo Antigo';
+        warnings.push('Posts de mais de 1 ano podem ter disponibilidade reduzida');
+        warnings.push('Recomenda-se usar sort "new" ao invés de "relevance"');
+        warnings.push('Parâmetro de tempo deve ser "all" para melhor cobertura');
+      } else if (start && start < sixMonthsAgo) {
+        severity = 'info';
+        titleEl.textContent = 'Informação - Conteúdo Semi-Antigo';
+        warnings.push('Conteúdo de 6+ meses pode ter paginação limitada');
+        warnings.push('Considere usar "all" no parâmetro de tempo');
+      }
+      
+      if (warnings.length > 0) {
+        // Set appropriate styling based on severity
+        warningDiv.className = `mt-3 p-4 rounded-xl border`;
+        if (severity === 'error') {
+          warningDiv.className += ` bg-red-500/10 border-red-500/30`;
+        } else if (severity === 'warning') {
+          warningDiv.className += ` bg-yellow-500/10 border-yellow-500/30`;
+        } else {
+          warningDiv.className += ` bg-blue-500/10 border-blue-500/30`;
+        }
+        
+        contentEl.innerHTML = `
+          <div class="space-y-2 text-sm">
+            ${warnings.map(warning => `
+              <div class="flex items-start gap-2">
+                <span class="text-yellow-400 mt-0.5">•</span>
+                <span class="text-gray-300">${warning}</span>
+              </div>
+            `).join('')}
+          </div>
+          
+          ${isOldContent ? `
+            <div class="mt-3 p-3 bg-black/30 rounded-lg">
+              <div class="text-white font-semibold text-sm mb-2">💡 Estratégias Recomendadas:</div>
+              <div class="text-xs text-gray-300 space-y-1">
+                <div>• Use sort "new" para busca cronológica</div>
+                <div>• Configure parâmetro de tempo como "all"</div>
+                <div>• Reduza o número de posts esperados</div>
+                <div>• Considere múltiplas buscas com períodos menores</div>
+                <div>• Teste a URL antes do scraping completo</div>
+              </div>
+            </div>
+          ` : ''}
+        `;
+        
+        warningDiv.classList.remove('hidden');
+      } else {
+        warningDiv.classList.add('hidden');
+      }
+    }
+    
+    // Optimize settings for old content
+    function optimizeForOldContent() {
+      // Reduce number of posts for better success rate
+      document.getElementById('numPosts').value = '500';
+      
+      // Increase delays for stability
+      document.getElementById('batchDelay').value = '3000';
+      
+      // Reduce batch size for better reliability
+      document.getElementById('batchSize').value = '25';
+      
+      // Increase retries
+      document.getElementById('maxRetries').value = '5';
+      
+      showNotification('⚙️ Configurações otimizadas para conteúdo antigo!', 'success');
+    }
+    
+    // Use recommended date ranges
+    function useRecommendedDates() {
+      const today = new Date();
+      const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 6, today.getDate());
+      const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+      
+      document.getElementById('startDate').value = sixMonthsAgo.toISOString().split('T')[0];
+      document.getElementById('endDate').value = oneMonthAgo.toISOString().split('T')[0];
+      
+      checkDateLimitations();
+      showNotification('📅 Datas ajustadas para período recomendado (últimos 6 meses)', 'success');
+    }
+
+    // Display URL Analysis with date limitations
+    function displayUrlAnalysis(analysis) {
+      const container = document.getElementById('urlAnalysisContent');
+      const analysisDiv = document.getElementById('urlAnalysis');
+      
+      if (analysis.length === 0) {
+        analysisDiv.classList.add('hidden');
+        return;
+      }
+
+      const validUrls = analysis.filter(a => a.isValid).length;
+      const invalidUrls = analysis.filter(a => !a.isValid).length;
+      const searchUrls = analysis.filter(a => a.type === 'search').length;
+      const oldContentUrls = analysis.filter(a => a.dateLimitations?.isOldContent).length;
+
+      container.innerHTML = `
+        <div class="mb-4 flex gap-4 text-sm flex-wrap">
+          <span class="text-green-400">✅ Válidas: ${validUrls}</span>
+          <span class="text-red-400">❌ Inválidas: ${invalidUrls}</span>
+          <span class="text-blue-400">🔍 Buscas: ${searchUrls}</span>
+          ${oldContentUrls > 0 ? `<span class="text-yellow-400">⏰ Conteúdo Antigo: ${oldContentUrls}</span>` : ''}
+        </div>
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+          ${analysis.map(item => `
+            <div data-url-index="${item.index}" class="p-3 rounded-lg ${
+              !item.isValid ? 'bg-red-500/10 border border-red-500/20' :
+              item.dateLimitations?.isOldContent ? 'bg-yellow-500/10 border border-yellow-500/20' :
+              'bg-green-500/10 border border-green-500/20'
+            }">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                  <span class="text-white font-semibold">${item.index}. ${item.type.toUpperCase()}</span>
+                  ${item.type === 'search' ? `<span class="ml-2 text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded">Query: "${item.searchParams?.query}"</span>` : ''}
+                  ${item.dateLimitations?.isOldContent ? `<span class="ml-2 text-xs px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded">⏰ Antigo</span>` : ''}
+                </div>
+                <span class="text-xs ${item.isValid ? 'text-green-400' : 'text-red-400'}">${item.isValid ? '✅' : '❌'}</span>
+              </div>
+              <div class="text-gray-300 text-sm mb-2">${item.details}</div>
+              
+              ${item.warnings && item.warnings.length > 0 ? `
+                <div class="mb-2">
+                  ${item.warnings.map(warning => `<div class="text-yellow-400 text-xs">⚠️ ${warning}</div>`).join('')}
+                </div>
+              ` : ''}
+              
+              ${item.dateLimitations?.limitations && item.dateLimitations.limitations.length > 0 ? `
+                <div class="mb-2 p-2 bg-black/30 rounded">
+                  <div class="text-yellow-300 text-xs font-semibold mb-1">Limitações de Data:</div>
+                  ${item.dateLimitations.limitations.map(limitation => `
+                    <div class="text-yellow-200 text-xs">• ${limitation}</div>
+                  `).join('')}
+                </div>
+              ` : ''}
+              
+              ${item.dateLimitations?.recommendations && item.dateLimitations.recommendations.length > 0 ? `
+                <div class="mb-2 p-2 bg-blue-500/10 rounded">
+                  <div class="text-blue-300 text-xs font-semibold mb-1">Recomendações:</div>
+                  ${item.dateLimitations.recommendations.map(rec => `
+                    <div class="text-blue-200 text-xs">• ${rec}</div>
+                  `).join('')}
+                </div>
+              ` : ''}
+              
+              <div class="text-gray-500 text-xs break-all mb-1">${item.url}</div>
+              ${item.apiUrl ? `<div class="text-blue-400 text-xs break-all">API: ${item.apiUrl}</div>` : ''}
+              ${item.type === 'search' && item.isValid ? `
+                <div class="mt-2 flex gap-2">
+                  <button onclick="testSearchUrl(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded text-xs transition-all">
+                    🧪 Testar URL
+                  </button>
+                  ${item.dateLimitations?.isOldContent ? `
+                    <button onclick="createOptimizedUrl('${item.url}', ${item.index})" class="px-2 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded text-xs transition-all">
+                      🔧 Otimizar
+                    </button>
+                  ` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      analysisDiv.classList.remove('hidden');
+    }
+    
+    // Create optimized URL for old content
+    function createOptimizedUrl(originalUrl, urlIndex) {
+      try {
+        const urlObj = new URL(originalUrl);
+        const searchParams = new URLSearchParams(urlObj.search);
+        
+        // Remove problematic parameters
+        searchParams.delete('cId');
+        searchParams.delete('iId');
+        
+        // Optimize for old content
+        searchParams.set('sort', 'new'); // Better for chronological search
+        searchParams.set('t', 'all');    // Search all time periods
+        
+        // Construct optimized URL
+        const optimizedUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}?${searchParams.toString()}`;
+        
+        // Show modal with optimized URL
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50';
+        modal.innerHTML = `
+          <div class="dark-glass rounded-xl p-6 max-w-4xl w-full mx-4">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <span>🔧</span> URL Otimizada para Conteúdo Antigo
+            </h3>
+            
+            <div class="space-y-4">
+              <div>
+                <h4 class="text-gray-300 font-semibold mb-2">URL Original:</h4>
+                <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <code class="text-red-300 text-sm break-all">${originalUrl}</code>
+                </div>
+              </div>
+              
+              <div>
+                <h4 class="text-gray-300 font-semibold mb-2">URL Otimizada:</h4>
+                <div class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <code class="text-green-300 text-sm break-all">${optimizedUrl}</code>
+                </div>
+              </div>
+              
+              <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <h4 class="text-blue-300 font-semibold mb-2">Otimizações Aplicadas:</h4>
+                <div class="text-sm text-blue-200 space-y-1">
+                  <div>✅ Removidos parâmetros cId/iId (específicos da interface web)</div>
+                  <div>✅ Sort alterado para "new" (melhor para conteúdo cronológico)</div>
+                  <div>✅ Tempo alterado para "all" (busca em todo período disponível)</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end gap-3">
+              <button onclick="navigator.clipboard.writeText('${optimizedUrl}').then(() => showNotification('📋 URL otimizada copiada!', 'success'))" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                📋 Copiar URL Otimizada
+              </button>
+              <button onclick="replaceUrlInInput('${originalUrl}', '${optimizedUrl}')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">
+                🔄 Substituir no Campo
+              </button>
+              <button onclick="this.parentElement.parentElement.parentElement.remove()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg">
+                Fechar
+              </button>
+            </div>
+          </div>
+        `;
+        
+        modal.onclick = (e) => {
+          if (e.target === modal) modal.remove();
+        };
+        
+        document.body.appendChild(modal);
+        
+      } catch (error) {
+        showNotification(`❌ Erro ao otimizar URL: ${error.message}`, 'error');
+      }
+    }
+    
+    // Replace URL in input field
+    function replaceUrlInInput(originalUrl, optimizedUrl) {
+      const urlInput = document.getElementById('urlInput');
+      const currentValue = urlInput.value;
+      const newValue = currentValue.replace(originalUrl, optimizedUrl);
+      urlInput.value = newValue;
+      
+      // Re-analyze URLs to show the optimization
+      analyzeUrls();
+      
+      showNotification('🔄 URL substituída e re-analisada!', 'success');
+      
+      // Close the modal
+      document.querySelector('.fixed.inset-0').remove();
     }
 
     // Test all proxies
@@ -1115,7 +2285,7 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       if (!autoRotate) {
         // Use first working proxy
         const working = workingProxies.find(p => p.status === 'working');
-        return working ? working.url : workingProxies[0].url;
+        return working ? working.url : workingProxies[0]?.url || '';
       }
       
       // Find available working proxies
@@ -1129,7 +2299,7 @@ https://thingproxy.freeboard.io/fetch/</textarea>
           if (p.failCount > 0) p.failCount--;
           if (p.failCount < 3) p.status = 'untested';
         });
-        return workingProxies[0].url;
+        return workingProxies[0]?.url || '';
       }
       
       // Rotate through available proxies
@@ -1151,7 +2321,7 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       }
     }
 
-    // Fetch with retry and proxy rotation
+    // Enhanced fetch with retry and proxy rotation
     async function fetchWithRetry(url, maxRetries = 3) {
       let lastError = null;
       
@@ -1159,23 +2329,38 @@ https://thingproxy.freeboard.io/fetch/</textarea>
         if (isStopped) throw new Error('Scraping stopped by user');
         
         const proxy = getNextProxy();
+        if (!proxy) {
+          throw new Error('No proxies available');
+        }
+        
         const proxyUrl = proxy + encodeURIComponent(url);
         
         try {
           console.log(`Tentativa ${i + 1}/${maxRetries} com proxy: ${proxy.substring(0, 30)}...`);
+          console.log(`URL sendo buscada: ${url}`);
           
           const response = await fetch(proxyUrl, {
-            signal: AbortSignal.timeout(10000)
+            signal: AbortSignal.timeout(15000),
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
           });
           
           if (response.ok) {
-            const data = await response.json();
-            if (data && (data.data || (Array.isArray(data) && data.length > 0))) {
-              return data;
+            const text = await response.text();
+            try {
+              const data = JSON.parse(text);
+              if (data && (data.data || (Array.isArray(data) && data.length > 0))) {
+                console.log(`✅ Sucesso na tentativa ${i + 1}`);
+                return data;
+              }
+            } catch (jsonError) {
+              console.error('Erro ao parsear JSON:', jsonError);
+              throw new Error('Invalid JSON response');
             }
           }
           
-          throw new Error(`Response not OK: ${response.status}`);
+          throw new Error(`Response not OK: ${response.status} ${response.statusText}`);
         } catch (error) {
           lastError = error;
           markProxyFailed(proxy);
@@ -1247,15 +2432,27 @@ https://thingproxy.freeboard.io/fetch/</textarea>
             Math.round((urlIndex / urls.length) * 100));
           
           try {
-            if (url.includes('/comments/')) {
-              // Single post
-              await processSinglePost(url);
-            } else if (url.includes('/search')) {
-              // Search results with pagination
-              await processSearchWithPagination(url);
-            } else if (url.includes('/r/')) {
-              // Subreddit with pagination
-              await processSubredditWithPagination(url);
+            const analyzed = analyzeRedditUrl(url);
+            
+            if (!analyzed.isValid) {
+              console.warn(`URL inválida ignorada: ${url}`);
+              scrapingSession.errors.push({ url, error: `URL inválida: ${analyzed.details}` });
+              continue;
+            }
+
+            switch (analyzed.type) {
+              case 'post':
+                await processSinglePost(url);
+                break;
+              case 'search':
+                await processEnhancedSearch(url, analyzed);
+                break;
+              case 'subreddit':
+                await processSubredditWithPagination(url);
+                break;
+              default:
+                console.warn(`Tipo de URL não suportado: ${analyzed.type}`);
+                scrapingSession.errors.push({ url, error: `Tipo não suportado: ${analyzed.type}` });
             }
           } catch (error) {
             console.error('Error processing URL:', error);
@@ -1286,72 +2483,232 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       }
     }
 
-    // Process search with pagination
-    async function processSearchWithPagination(url) {
-      const urlObj = new URL(url);
-      const query = urlObj.searchParams.get('q') || '';
-      const subreddit = urlObj.pathname.split('/')[2];
+    // Enhanced search processing with fallbacks for old content
+    async function processEnhancedSearch(url, analyzed) {
       const totalWanted = scrapingSession.totalPostsWanted;
       const batchSize = scrapingSession.batchSize;
       
       let after = null;
       let batchNumber = 0;
       let collected = 0;
+      let consecutiveEmptyBatches = 0;
+      const maxEmptyBatches = 3; // Stop after 3 consecutive empty batches
       
-      while (collected < totalWanted && !isStopped) {
+      // Use the analyzed API URL as base
+      let baseApiUrl = analyzed.apiUrl;
+      
+      console.log(`🔍 Iniciando busca avançada:`);
+      console.log(`📍 URL original: ${url}`);
+      console.log(`🔗 URL da API: ${baseApiUrl}`);
+      console.log(`⚙️ Parâmetros: ${JSON.stringify(analyzed.searchParams)}`);
+      
+      if (analyzed.warnings && analyzed.warnings.length > 0) {
+        console.warn(`⚠️ Avisos: ${analyzed.warnings.join(', ')}`);
+      }
+      
+      // Check if this is old content search
+      const isOldContent = analyzed.dateLimitations?.isOldContent;
+      if (isOldContent) {
+        console.log(`⏰ Detectado conteúdo antigo - usando estratégias adaptadas`);
+        console.log(`📋 Limitações: ${analyzed.dateLimitations.limitations.join(', ')}`);
+      }
+      
+      while (collected < totalWanted && !isStopped && consecutiveEmptyBatches < maxEmptyBatches) {
         if (isPaused) {
           await waitForResume();
         }
         
         batchNumber++;
         const remaining = totalWanted - collected;
-        const limit = Math.min(batchSize, remaining);
+        const currentBatchSize = isOldContent ? Math.min(25, batchSize, remaining) : Math.min(batchSize, remaining);
         
-        updateBatchProgress(`Pesquisa - Lote ${batchNumber}`, collected, totalWanted, 'loading');
+        updateBatchProgress(`Busca - Lote ${batchNumber}`, collected, totalWanted, 'loading');
         
-        let apiUrl = `https://www.reddit.com/r/${subreddit}/search.json?q=${encodeURIComponent(query)}&restrict_sr=on&limit=${limit}&sort=new`;
+        // Build API URL with pagination
+        let apiUrl = baseApiUrl;
+        const separator = apiUrl.includes('?') ? '&' : '?';
+        apiUrl += `${separator}limit=${currentBatchSize}`;
         if (after) apiUrl += `&after=${after}`;
         
         try {
+          console.log(`🔍 [Lote ${batchNumber}] Buscando: ${apiUrl}`);
+          
           const data = await fetchWithRetry(apiUrl, scrapingSession.maxRetries);
           
-          if (!data || !data.data || !data.data.children || data.data.children.length === 0) {
-            console.log('Sem mais resultados na pesquisa');
-            break;
+          // Detailed response validation
+          console.log(`📊 [Lote ${batchNumber}] Resposta recebida:`, {
+            hasData: !!data,
+            hasDataField: !!(data && data.data),
+            hasChildren: !!(data && data.data && data.data.children),
+            childrenCount: data?.data?.children?.length || 0,
+            after: data?.data?.after || null
+          });
+          
+          if (!data) {
+            console.error(`❌ [Lote ${batchNumber}] Resposta vazia ou nula`);
+            throw new Error('Resposta vazia do servidor');
           }
+          
+          if (!data.data) {
+            console.error(`❌ [Lote ${batchNumber}] Resposta sem campo data:`, data);
+            throw new Error('Resposta da API não contém campo "data"');
+          }
+          
+          if (!data.data.children) {
+            console.error(`❌ [Lote ${batchNumber}] Resposta sem campo children:`, data.data);
+            throw new Error('Resposta da API não contém campo "children"');
+          }
+          
+          if (data.data.children.length === 0) {
+            consecutiveEmptyBatches++;
+            console.log(`ℹ️ [Lote ${batchNumber}] Lote vazio (${consecutiveEmptyBatches}/${maxEmptyBatches})`);
+            
+            if (batchNumber === 1) {
+              throw new Error(`Nenhum resultado encontrado para a query "${analyzed.searchParams?.query || 'unknown'}"`);
+            }
+            
+            if (consecutiveEmptyBatches >= maxEmptyBatches) {
+              console.log(`🛑 [Lote ${batchNumber}] Muitos lotes vazios consecutivos - encerrando busca`);
+              if (isOldContent) {
+                showNotification(`⏰ Busca de conteúdo antigo limitada pelo Reddit após ${collected} posts`, 'warning');
+              }
+              break;
+            }
+            
+            // For old content, try a different approach if we hit empty batches early
+            if (isOldContent && batchNumber <= 3 && consecutiveEmptyBatches >= 2) {
+              console.log(`🔄 Tentando estratégia alternativa para conteúdo antigo...`);
+              const fallbackResult = await tryFallbackStrategy(analyzed, collected, totalWanted);
+              if (fallbackResult.posts > 0) {
+                collected += fallbackResult.posts;
+                consecutiveEmptyBatches = 0; // Reset counter
+                updateBatchProgress(`Busca Alternativa`, collected, totalWanted, 'complete');
+              }
+            }
+            
+            // Get next page token even for empty batches
+            after = data.data.after;
+            if (!after) {
+              console.log(`🏁 [Lote ${batchNumber}] Sem token de próxima página - fim da busca`);
+              break;
+            }
+            
+            // Continue to next iteration
+            continue;
+          }
+          
+          // Reset empty batch counter on successful batch
+          consecutiveEmptyBatches = 0;
+          
+          console.log(`✅ [Lote ${batchNumber}] Processando ${data.data.children.length} posts`);
           
           const newPosts = await processBatchPosts(data.data.children);
           collected += newPosts.length;
           
+          console.log(`📈 [Lote ${batchNumber}] ${newPosts.length} posts adicionados (total: ${collected})`);
+          
           // Get next page token
           after = data.data.after;
-          if (!after) break;
+          if (!after) {
+            console.log(`🏁 [Lote ${batchNumber}] Sem token de próxima página - fim da busca`);
+            break;
+          }
           
-          updateBatchProgress(`Pesquisa - Lote ${batchNumber}`, collected, totalWanted, 'complete');
+          updateBatchProgress(`Busca - Lote ${batchNumber}`, collected, totalWanted, 'complete');
+          
+          // Adaptive delay for old content
+          const delay = isOldContent ? scrapingSession.batchDelay * 1.5 : scrapingSession.batchDelay;
           
           // Delay between batches
           if (collected < totalWanted && after) {
-            await new Promise(resolve => setTimeout(resolve, scrapingSession.batchDelay));
+            console.log(`⏳ Aguardando ${delay}ms antes do próximo lote...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
+          
         } catch (error) {
-          updateBatchProgress(`Pesquisa - Lote ${batchNumber}`, collected, totalWanted, 'error');
+          console.error(`❌ [Lote ${batchNumber}] Erro detalhado:`, {
+            message: error.message,
+            stack: error.stack,
+            apiUrl: apiUrl,
+            baseApiUrl: baseApiUrl,
+            analyzed: analyzed,
+            isOldContent: isOldContent
+          });
+          
+          updateBatchProgress(`Busca - Lote ${batchNumber}`, collected, totalWanted, 'error');
+          
+          // Show more specific error message with old content context
+          let errorMsg = `Erro na busca: ${error.message}`;
+          if (error.message.includes('Nenhum resultado encontrado')) {
+            errorMsg += `\n\nSugestões:`;
+            if (isOldContent) {
+              errorMsg += `\n- ⏰ Conteúdo muito antigo pode não estar disponível`;
+              errorMsg += `\n- 📅 Tente um período mais recente`;
+              errorMsg += `\n- 🔧 Use o botão "Otimizar" na análise de URLs`;
+            }
+            errorMsg += `\n- ✏️ Verifique se a query "${analyzed.searchParams?.query}" está correta`;
+            errorMsg += `\n- 🔍 Tente uma busca mais ampla`;
+            errorMsg += `\n- 🏠 Verifique se o subreddit existe`;
+          }
+          
+          showNotification(errorMsg, 'error');
           throw error;
         }
+      }
+      
+      console.log(`🎉 Busca concluída: ${collected} posts coletados em ${batchNumber} lotes`);
+      
+      // Show completion message with context
+      if (isOldContent && collected < totalWanted) {
+        showNotification(
+          `⏰ Busca de conteúdo antigo concluída: ${collected} posts coletados\n` +
+          `📊 Limitações do Reddit podem ter afetado a coleta completa`,
+          'warning'
+        );
+      }
+    }
+    
+    // Try fallback strategy for old content
+    async function tryFallbackStrategy(analyzed, currentCollected, totalWanted) {
+      console.log(`🔄 Executando estratégia de fallback para conteúdo antigo...`);
+      
+      try {
+        // Strategy 1: Try with just subreddit listing (no search) sorted by new
+        const subreddit = analyzed.searchParams?.query?.split(' ')[0] || 
+                          analyzed.apiUrl.split('/r/')[1]?.split('/')[0];
+        
+        if (subreddit) {
+          const fallbackUrl = `https://www.reddit.com/r/${subreddit}/new.json?limit=25&t=all`;
+          console.log(`📍 Tentando fallback com listagem do subreddit: ${fallbackUrl}`);
+          
+          const data = await fetchWithRetry(fallbackUrl, 2);
+          
+          if (data && data.data && data.data.children && data.data.children.length > 0) {
+            const posts = await processBatchPosts(data.data.children);
+            console.log(`✅ Fallback bem-sucedido: ${posts.length} posts encontrados`);
+            return { posts: posts.length };
+          }
+        }
+        
+        console.log(`❌ Estratégia de fallback não encontrou resultados`);
+        return { posts: 0 };
+        
+      } catch (error) {
+        console.error(`❌ Erro na estratégia de fallback:`, error);
+        return { posts: 0 };
       }
     }
 
     // Process subreddit with pagination
     async function processSubredditWithPagination(url) {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/').filter(p => p);
-      const subreddit = pathParts[1];
-      const sort = pathParts[2] || 'hot';
+      const analyzed = analyzeRedditUrl(url);
       const totalWanted = scrapingSession.totalPostsWanted;
       const batchSize = scrapingSession.batchSize;
       
       let after = null;
       let batchNumber = 0;
       let collected = 0;
+      let baseApiUrl = analyzed.apiUrl;
       
       while (collected < totalWanted && !isStopped) {
         if (isPaused) {
@@ -1362,9 +2719,11 @@ https://thingproxy.freeboard.io/fetch/</textarea>
         const remaining = totalWanted - collected;
         const limit = Math.min(batchSize, remaining);
         
-        updateBatchProgress(`r/${subreddit} - Lote ${batchNumber}`, collected, totalWanted, 'loading');
+        updateBatchProgress(`Subreddit - Lote ${batchNumber}`, collected, totalWanted, 'loading');
         
-        let apiUrl = `https://www.reddit.com/r/${subreddit}/${sort}.json?limit=${limit}`;
+        let apiUrl = baseApiUrl;
+        const separator = apiUrl.includes('?') ? '&' : '?';
+        apiUrl += `${separator}limit=${limit}`;
         if (after) apiUrl += `&after=${after}`;
         
         try {
@@ -1382,14 +2741,14 @@ https://thingproxy.freeboard.io/fetch/</textarea>
           after = data.data.after;
           if (!after) break;
           
-          updateBatchProgress(`r/${subreddit} - Lote ${batchNumber}`, collected, totalWanted, 'complete');
+          updateBatchProgress(`Subreddit - Lote ${batchNumber}`, collected, totalWanted, 'complete');
           
           // Delay between batches
           if (collected < totalWanted && after) {
             await new Promise(resolve => setTimeout(resolve, scrapingSession.batchDelay));
           }
         } catch (error) {
-          updateBatchProgress(`r/${subreddit} - Lote ${batchNumber}`, collected, totalWanted, 'error');
+          updateBatchProgress(`Subreddit - Lote ${batchNumber}`, collected, totalWanted, 'error');
           throw error;
         }
       }
@@ -1535,7 +2894,7 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       if (scrapingSession) {
         const duration = Math.round((Date.now() - scrapingSession.startTime) / 1000);
         const summary = `
-          ✅ Scraping concluído!
+          ✅ Scraping principal concluído!
           📝 ${scrapingSession.totalPostsCollected} posts coletados
           💬 ${scrapingSession.totalCommentsCollected} comentários
           ⏱️ Tempo: ${duration}s
@@ -1546,10 +2905,22 @@ https://thingproxy.freeboard.io/fetch/</textarea>
         
         // Auto extract if enabled
         if (document.getElementById('extractLinks').checked) {
-          setTimeout(() => extractAllLinks(), 1000);
+          setTimeout(() => {
+            extractAllLinks();
+            // Start recursive scraping after link extraction
+            if (document.getElementById('recursiveRedditScraping').checked) {
+              setTimeout(() => processRecursiveRedditLinks(), 2000);
+            }
+          }, 1000);
+        } else {
+          // Start recursive scraping even if link extraction is disabled
+          if (document.getElementById('recursiveRedditScraping').checked) {
+            setTimeout(() => processRecursiveRedditLinks(), 1000);
+          }
         }
+        
         if (document.getElementById('extractImages').checked) {
-          setTimeout(() => extractAllImages(), 2000);
+          setTimeout(() => extractAllImages(), 3000);
         }
         
         // Show posts
@@ -2224,15 +3595,18 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       const examples = [
         'https://www.reddit.com/r/programming/hot',
         'https://www.reddit.com/r/technology/top',
-        'https://www.reddit.com/r/AskReddit/top'
+        'https://www.reddit.com/r/AskReddit/top',
+        'https://www.reddit.com/r/IMGreddit/search/?q=old&type=posts&sort=hot',
+        'https://www.reddit.com/r/IMGreddit/search/?q=old&cId=2bf1067e-4a08-47d3-a5ca-26f7273e135f&iId=0de7faad-eec6-4e9d-ab33-1a79c6c33281'
       ];
       document.getElementById('urlInput').value = examples.join('\n');
-      showNotification('✅ URLs de exemplo adicionadas!', 'success');
+      showNotification('✅ URLs de exemplo adicionadas! (incluindo URL com cId/iId + detecção temporal)', 'success');
     }
 
     // Clear URLs
     function clearUrls() {
       document.getElementById('urlInput').value = '';
+      document.getElementById('urlAnalysis').classList.add('hidden');
       showNotification('🗑️ URLs limpas', 'info');
     }
 
@@ -2242,6 +3616,8 @@ https://thingproxy.freeboard.io/fetch/</textarea>
         posts = [];
         extractedLinks = [];
         extractedImages = [];
+        recursiveRedditLinks = [];
+        processedRedditLinks.clear();
         localStorage.removeItem('redditScraperPosts');
         localStorage.removeItem('redditScraperLinks');
         localStorage.removeItem('redditScraperImages');
@@ -2486,7 +3862,25 @@ https://thingproxy.freeboard.io/fetch/</textarea>
                 <span class="px-3 py-1 bg-green-500/20 text-green-300 rounded-full">${new Date(post.created * 1000).toLocaleDateString('pt-BR')}</span>
                 <span class="px-3 py-1 bg-orange-500/20 text-orange-300 rounded-full">⬆️ ${post.score}</span>
                 <span class="px-3 py-1 bg-pink-500/20 text-pink-300 rounded-full">💬 ${post.num_comments} (${countComments(post.comments)} carregados)</span>
+                ${post.isRecursive ? `
+                  <span onclick="showRecursiveTree('${post.id}')" class="px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full flex items-center gap-1 cursor-pointer hover:bg-yellow-500/30 transition-all">
+                    🔄 Recursivo Nível ${post.recursionDepth}
+                  </span>
+                ` : ''}
               </div>
+              ${post.isRecursive ? `
+                <div class="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <div class="text-xs text-yellow-300">
+                    <span class="font-semibold">🔗 Encontrado via:</span> ${post.recursionSource}
+                  </div>
+                  ${post.recursionParent ? `
+                    <div class="text-xs text-yellow-400 mt-1">
+                      <span class="font-semibold">📍 Post pai:</span> 
+                      <a href="${post.recursionParent}" target="_blank" class="hover:underline">${post.recursionParent}</a>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
             </div>
             <a href="${post.url}" target="_blank" class="text-gray-400 hover:text-white transition-all p-2 hover:bg-white/10 rounded-lg">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2769,24 +4163,74 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       const chartContainer = document.getElementById('chartsContainer');
       const maxCount = Math.max(...Object.values(subredditCounts));
       
+      // Recursive posts analysis
+      const recursivePosts = posts.filter(p => p.isRecursive);
+      const recursiveByDepth = {};
+      recursivePosts.forEach(p => {
+        const depth = p.recursionDepth || 1;
+        recursiveByDepth[depth] = (recursiveByDepth[depth] || 0) + 1;
+      });
+      
       chartContainer.innerHTML = `
-        <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-2">
-          <span>📊</span> Posts por Subreddit
-        </h3>
-        <div class="space-y-4">
-          ${Object.entries(subredditCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(([sub, count]) => `
-              <div class="flex items-center gap-4">
-                <div class="text-gray-300 w-40">r/${sub}</div>
-                <div class="flex-1 bg-gray-700 rounded-full overflow-hidden h-8">
-                  <div class="h-full chart-bar flex items-center justify-end pr-3" style="width: ${(count / maxCount) * 100}%">
-                    <span class="text-white text-sm font-bold">${count}</span>
+        <div class="grid md:grid-cols-2 gap-8">
+          <div>
+            <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-2">
+              <span>📊</span> Posts por Subreddit
+            </h3>
+            <div class="space-y-4">
+              ${Object.entries(subredditCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8)
+                .map(([sub, count]) => `
+                  <div class="flex items-center gap-4">
+                    <div class="text-gray-300 w-32">r/${sub}</div>
+                    <div class="flex-1 bg-gray-700 rounded-full overflow-hidden h-6">
+                      <div class="h-full chart-bar flex items-center justify-end pr-3" style="width: ${(count / maxCount) * 100}%">
+                        <span class="text-white text-sm font-bold">${count}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                `).join('')}
+            </div>
+          </div>
+          
+          ${recursivePosts.length > 0 ? `
+            <div>
+              <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-2">
+                <span>🔄</span> Posts Recursivos por Nível
+              </h3>
+              <div class="space-y-4">
+                ${Object.entries(recursiveByDepth)
+                  .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                  .map(([depth, count]) => `
+                    <div class="flex items-center gap-4">
+                      <div class="text-gray-300 w-20">Nível ${depth}</div>
+                      <div class="flex-1 bg-gray-700 rounded-full overflow-hidden h-6">
+                        <div class="h-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-end pr-3" style="width: ${(count / Math.max(...Object.values(recursiveByDepth))) * 100}%">
+                          <span class="text-white text-sm font-bold">${count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
               </div>
-            `).join('')}
+              <div class="mt-4 p-3 bg-yellow-500/10 rounded-lg">
+                <p class="text-yellow-300 text-sm">
+                  <span class="font-semibold">Total de posts recursivos:</span> ${recursivePosts.length}
+                </p>
+                <p class="text-yellow-400 text-xs mt-1">
+                  Posts encontrados automaticamente através de links em outros posts
+                </p>
+              </div>
+            </div>
+          ` : `
+            <div class="flex items-center justify-center h-48 text-gray-500">
+              <div class="text-center">
+                <div class="text-6xl mb-3">🔄</div>
+                <p>Nenhum post recursivo encontrado</p>
+                <p class="text-sm mt-1">Habilite o scraping recursivo para descobrir mais conteúdo</p>
+              </div>
+            </div>
+          `}
         </div>
       `;
     }
@@ -3324,6 +4768,9 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       document.getElementById('totalLinks').textContent = extractedLinks.length;
       document.getElementById('totalImages').textContent = extractedImages.length;
       
+      const recursivePosts = posts.filter(p => p.isRecursive);
+      document.getElementById('recursivePosts').textContent = recursivePosts.length;
+      
       const totalComments = posts.reduce((sum, p) => {
         return sum + countComments(p.comments);
       }, 0);
@@ -3331,7 +4778,7 @@ https://thingproxy.freeboard.io/fetch/</textarea>
       
       if (posts.length > 0) {
         console.log('📊 Estatísticas Atualizadas:');
-        console.log(`- Posts: ${posts.length}`);
+        console.log(`- Posts: ${posts.length} (${recursivePosts.length} recursivos)`);
         console.log(`- Comentários totais: ${totalComments}`);
         console.log(`- Links extraídos: ${extractedLinks.length}`);
         console.log(`- Imagens encontradas: ${extractedImages.length}`);
